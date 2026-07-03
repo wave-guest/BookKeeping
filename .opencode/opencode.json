@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "permission": {
+    "bash": {
+      "git *": "allow",
+      "Remove-Item*": "ask",
+      "rm *": "ask",
+      "del *": "ask",
+      "rd *": "ask",
+      "takeown*": "ask",
+      "icacls*": "ask",
+      "Clear-Item*": "ask",
+      "Move-Item*": "ask",
+      "move *": "ask",
+      "ren *": "ask",
+      "Rename-Item*": "ask",
+      "New-Item*": "ask",
+      "Add-Content*": "ask",
+      "Set-Content*": "ask",
+      "Out-File*": "ask",
+      "*": "allow"
+    }
+  }
+}

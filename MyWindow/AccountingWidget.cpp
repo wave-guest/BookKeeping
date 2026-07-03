@@ -461,7 +461,8 @@ void AccountingWidget::onDeleteRecord()
 
     if (QMessageBox::question(this, "确认删除", "是否删除选中的记录？",
         QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
-        d->recordTable->removeRow(currentRow);
+        QString id = d->recordTable->item(currentRow, 7)->text();
+        emit deleteRecord(id);
 
         // 如果是编辑模式，退出
         if (d->isEditMode) {

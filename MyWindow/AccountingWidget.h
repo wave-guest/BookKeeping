@@ -21,6 +21,7 @@ public:
 signals:
     void addRecord(TradeRecord record);
     void updateRecord(TradeRecord record);
+    void deleteRecord(QString id);
 
 private slots:
     // 左侧表单：添加/修改记录

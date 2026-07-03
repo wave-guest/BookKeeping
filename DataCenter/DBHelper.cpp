@@ -94,6 +94,35 @@ DBHelper::QueryResult DBHelper::exec(const std::string& sql)
         });
 }
 
+DBHelper::QueryResult DBHelper::exec(const std::string& sql, const std::vector<std::string>& params)
+{
+    return submit([this, sql, params]()->QueryResult
+        {
+            if (!m_pImpl->m_db) { return { false,"Database not open",{} }; }
+
+            sqlite3* db = m_pImpl->m_db->connection().get();
+            sqlite3_stmt* stmt = nullptr;
+
+            if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK)
+                return { false, sqlite3_errmsg(db), {} };
+
+            std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>
+                stmtPtr(stmt, sqlite3_finalize);
+
+            for (size_t i = 0; i < params.size(); ++i)
+            {
+                if (sqlite3_bind_text(stmt, static_cast<int>(i + 1), params[i].c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK)
+                    return { false, sqlite3_errmsg(db), {} };
+            }
+
+            int rc = sqlite3_step(stmt);
+            if (rc != SQLITE_DONE && rc != SQLITE_ROW)
+                return { false, sqlite3_errmsg(db), {} };
+
+            return { true, "", {} };
+        });
+}
+
 DBHelper::QueryResult DBHelper::query(const std::string& sql)
 {
     return submit([this, sql]()->QueryResult
@@ -109,6 +138,44 @@ DBHelper::QueryResult DBHelper::query(const std::string& sql)
 
             std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>
                 stmtPtr(stmt, sqlite3_finalize);
+
+            int cols = sqlite3_column_count(stmt);
+
+            while (sqlite3_step(stmt) == SQLITE_ROW)
+            {
+                Row row;
+                for (int i = 0; i < cols; ++i)
+                {
+                    const unsigned char* txt = sqlite3_column_text(stmt, i);
+                    row.emplace_back(txt ? reinterpret_cast<const char*>(txt) : "");
+                }
+                result.push_back(row);
+            }
+            return { true, "", result };
+        });
+}
+
+DBHelper::QueryResult DBHelper::query(const std::string& sql, const std::vector<std::string>& params)
+{
+    return submit([this, sql, params]()->QueryResult
+        {
+            if (!m_pImpl->m_db) { return { false,"Database not open",{} }; }
+
+            std::vector<Row> result;
+            sqlite3* db = m_pImpl->m_db->connection().get();
+
+            sqlite3_stmt* stmt = nullptr;
+            if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK)
+                return { false, sqlite3_errmsg(db), {} };
+
+            std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>
+                stmtPtr(stmt, sqlite3_finalize);
+
+            for (size_t i = 0; i < params.size(); ++i)
+            {
+                if (sqlite3_bind_text(stmt, static_cast<int>(i + 1), params[i].c_str(), -1, SQLITE_TRANSIENT) != SQLITE_OK)
+                    return { false, sqlite3_errmsg(db), {} };
+            }
 
             int cols = sqlite3_column_count(stmt);
 

@@ -11,15 +11,12 @@ class DataCenter::Impl
 {
 public:
     DBHelper helper;
-
-public:
-}; 
+};
 
 DataCenter::DataCenter(QObject* parent)
     : QObject(parent)
     , m_pImpl(std::make_unique<Impl>())
 {
-    
 }
 
 DataCenter::~DataCenter()
@@ -28,74 +25,82 @@ DataCenter::~DataCenter()
 
 bool DataCenter::addRecord(const TradeRecord& record)
 {
-    QString sql = 
-        QString("INSERT INTO records (type, category, source, amount, date, remark, 'from', 'to') VALUES('%1' , '%2' , '%3' , '%4' , '%5' , '%6' , '%7', '%8');")
-		.arg(record.trade_type)
-		.arg(record.trade_category)
-		.arg(record.source)
-		.arg(record.amount)
-		.arg(record.trade_time)
-		.arg(record.remark)
-        .arg(record.from)
-        .arg(record.to);
+    std::string sql = R"(
+        INSERT INTO records (type, category, source, amount, date, remark, source_account, target_account)
+        VALUES(?, ?, ?, ?, ?, ?, ?, ?);
+    )";
 
+    auto res = m_pImpl->helper.exec(sql, {
+        record.trade_type.toStdString(),
+        record.trade_category.toStdString(),
+        record.source.toStdString(),
+        std::to_string(record.amount),
+        record.trade_time.toStdString(),
+        record.remark.toStdString(),
+        record.from.toStdString(),
+        record.to.toStdString()
+    });
 
-    auto res = m_pImpl->helper.exec(sql.toStdString());
     if (!res.success)
     {
         qDebug() << "插入失败: " << res.error;
-        record.info();
     }
     return res.success;
 }
 
 bool DataCenter::deleteRecord(int id)
 {
-    auto res = m_pImpl->helper.exec(std::string());
+    std::string sql = "DELETE FROM records WHERE id = ?;";
+    auto res = m_pImpl->helper.exec(sql, { std::to_string(id) });
+    if (!res.success)
+    {
+        qDebug() << "删除失败: " << res.error;
+    }
     return res.success;
 }
 
 bool DataCenter::updateRecord(const TradeRecord& record)
 {
-    QString sql =
-        QString(R"(
-        UPDATE records 
+    std::string sql = R"(
+        UPDATE records
         SET
-            'type' = '%1',
-            'category' = '%2',
-            'source' = '%3',
-            'amount' = '%4',
-            'date' = '%5',
-            'remark' = '%6',
-            'from' = '%7',
-            'to' = '%8'
-        WHERE id = '%9';)")
-        .arg(record.trade_type)
-        .arg(record.trade_category)
-        .arg(record.source)
-        .arg(record.amount)
-        .arg(record.trade_time)
-        .arg(record.remark)
-        .arg(record.from)
-        .arg(record.to)
-        .arg(record.id);
+            type = ?,
+            category = ?,
+            source = ?,
+            amount = ?,
+            date = ?,
+            remark = ?,
+            source_account = ?,
+            target_account = ?
+        WHERE id = ?;
+    )";
 
-    auto res = m_pImpl->helper.exec(sql.toStdString());
+    auto res = m_pImpl->helper.exec(sql, {
+        record.trade_type.toStdString(),
+        record.trade_category.toStdString(),
+        record.source.toStdString(),
+        std::to_string(record.amount),
+        record.trade_time.toStdString(),
+        record.remark.toStdString(),
+        record.from.toStdString(),
+        record.to.toStdString(),
+        record.id.toStdString()
+    });
+
     if (!res.success)
     {
         qDebug() << "更新失败: " << res.error;
-        record.info();
     }
     return res.success;
 }
 
 QList<TradeRecord> DataCenter::getAllRecords()
 {
-    QString sql = R"(
+    std::string sql = R"(
         SELECT * FROM records ORDER BY date DESC;
     )";
-    auto res = m_pImpl->helper.query(sql.toStdString());
-	QList <TradeRecord> records;
+    auto res = m_pImpl->helper.query(sql);
+    QList<TradeRecord> records;
     if (res.success)
     {
         for (const auto& row : res.data)
@@ -103,14 +108,14 @@ QList<TradeRecord> DataCenter::getAllRecords()
             TradeRecord record;
             record.id = QString::fromStdString(row[0]);
             record.trade_type = QString::fromStdString(row[1]);
-			record.trade_category = QString::fromStdString(row[2]);
-			record.source = QString::fromStdString(row[3]);
-			record.amount = std::stod(row[4]);
-			record.trade_time = QString::fromStdString(row[5]);
+            record.trade_category = QString::fromStdString(row[2]);
+            record.source = QString::fromStdString(row[3]);
+            record.amount = std::stod(row[4]);
+            record.trade_time = QString::fromStdString(row[5]);
             record.remark = QString::fromStdString(row[6]);
             record.from = QString::fromStdString(row[7]);
             record.to = QString::fromStdString(row[8]);
-			records.append(record);
+            records.append(record);
         }
     }
     return records;
@@ -118,12 +123,12 @@ QList<TradeRecord> DataCenter::getAllRecords()
 
 TradeRecord DataCenter::getNewRecord()
 {
-    QString sql = R"(
+    std::string sql = R"(
         SELECT * FROM records
         ORDER BY id DESC
         LIMIT 1;
     )";
-    auto res = m_pImpl->helper.query(sql.toStdString());
+    auto res = m_pImpl->helper.query(sql);
     TradeRecord record;
     if (res.success)
     {
@@ -143,24 +148,24 @@ TradeRecord DataCenter::getNewRecord()
     return record;
 }
 
-void DataCenter::initTables()
+void DataCenter::initTables(const QString& dbPath)
 {
-    // 创建数据库
-    // 原则上通过配置文件读取, 后面修改
-    m_pImpl->helper.open(QCoreApplication::applicationDirPath().toStdString() + "/config/account.db");
-    
-    // 创建表
+    QString path = dbPath.isEmpty()
+        ? QCoreApplication::applicationDirPath() + "/config/account.db"
+        : dbPath;
+    m_pImpl->helper.open(path.toStdString());
+
     auto res = m_pImpl->helper.exec(R"(
         CREATE TABLE IF NOT EXISTS records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type INTEGER NOT NULL,
+            type TEXT NOT NULL,
             category TEXT NOT NULL,
             source TEXT NOT NULL,
             amount REAL NOT NULL,
             date TEXT NOT NULL,
             remark TEXT,
-            frome TEXT,
-            to TEXT
+            source_account TEXT,
+            target_account TEXT
         );
     )");
     if (!res.success)
@@ -171,47 +176,43 @@ void DataCenter::initTables()
 
 Statistics DataCenter::getStatistics(TimeRange range, int year, int month, int day)
 {
-
     Statistics stats;
-    std::string sql;
-
-    // 构建基础SQL
-    sql = R"(
-        SELECT 
+    std::string sql = R"(
+        SELECT
             COALESCE(SUM(CASE WHEN type = '收入' THEN amount ELSE 0 END), 0) as income,
             COALESCE(SUM(CASE WHEN type = '支出' THEN amount ELSE 0 END), 0) as expense
         FROM records
     )";
 
-    // 根据时间范围添加WHERE条件
+    std::vector<std::string> params;
+
     switch (range) {
     case TimeRange::Total:
-        // 无条件，查询所有记录
         break;
 
     case TimeRange::Year:
-        sql += " WHERE strftime('%Y', date) = '" + std::to_string(year) + "'";
+        sql += " WHERE strftime('%Y', date) = ?";
+        params.push_back(std::to_string(year));
         break;
 
     case TimeRange::Month: {
-        // 格式化为 YYYY-MM
         char monthStr[8];
         snprintf(monthStr, sizeof(monthStr), "%04d-%02d", year, month);
-        sql += " WHERE strftime('%Y-%m', date) = '" + std::string(monthStr) + "'";
+        sql += " WHERE strftime('%Y-%m', date) = ?";
+        params.push_back(std::string(monthStr));
         break;
     }
 
     case TimeRange::Day: {
-        // 格式化为 YYYY-MM-DD
         char dayStr[11];
         snprintf(dayStr, sizeof(dayStr), "%04d-%02d-%02d", year, month, day);
-        sql += " WHERE date = '" + std::string(dayStr) + "'";
+        sql += " WHERE date = ?";
+        params.push_back(std::string(dayStr));
         break;
     }
     }
 
-    // 执行查询
-    DBHelper::QueryResult result = m_pImpl->helper.query(sql);
+    DBHelper::QueryResult result = m_pImpl->helper.query(sql, params);
 
     if (result.success && !result.data.empty()) {
         const auto& row = result.data[0];

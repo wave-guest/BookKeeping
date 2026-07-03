@@ -31,7 +31,9 @@ public:
     bool isOpen() const;
 	QueryResult open(const std::string& path);
     QueryResult exec(const std::string& sql);
+    QueryResult exec(const std::string& sql, const std::vector<std::string>& params);
 	QueryResult query(const std::string& sql);
+    QueryResult query(const std::string& sql, const std::vector<std::string>& params);
 
 private:
     class Impl;

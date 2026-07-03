@@ -24,7 +24,7 @@ public:
     explicit DataCenter(QObject* parent = nullptr);
     ~DataCenter() override;
 
-    void initTables();
+    void initTables(const QString& dbPath = QString());
     // 核心统计接口（一个函数搞定所有）
     Statistics getStatistics(TimeRange range,
         int year = 0,

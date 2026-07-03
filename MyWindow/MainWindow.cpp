@@ -294,7 +294,7 @@ QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     QVBoxLayout* profitWidgetLayout = new QVBoxLayout(profitWidget);
     QLabel* profitTitle = new QLabel("盈余", profitWidget);
     profitTitle->setStyleSheet("font-size: 14px; opacity: 0.8;");
-    QLabel* profitValue = new QLabel(profitWidget);
+    QLabel* profitValue = new QLabel("¥0.00", profitWidget);
     profitValue->setStyleSheet("font-size: 24px; font-weight: bold;");
     profitLabelMap[title] = profitValue;
     profitWidgetLayout->addWidget(profitTitle);
@@ -355,6 +355,15 @@ MainWidget::MainWidget(QWidget* parent)
         {
             qDebug() << "修改记录";
             d_ptr->dataCenter.updateRecord(record);
+        });
+
+    connect(d->accountingWidget, &AccountingWidget::deleteRecord, [this](QString id)
+        {
+            qDebug() << "删除记录, id:" << id;
+            d_ptr->dataCenter.deleteRecord(id.toInt());
+            auto list = d_ptr->dataCenter.getAllRecords();
+            d_ptr->accountingWidget->fillTable(list);
+            updateBalanceCards();
         });
 
     auto list = d_ptr->dataCenter.getAllRecords();
