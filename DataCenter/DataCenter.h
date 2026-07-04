@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <QObject>
+#include <QDate>
 #include <QList>
 #include <QMap>
 
@@ -42,6 +43,16 @@ public:
     double getExpense(TimeRange range, int year = 0, int month = 0, int day = 0);
     double getProfit(TimeRange range, int year = 0, int month = 0, int day = 0);
 
+
+    // --------------- 统计分析接口 ---------------
+    // 分类汇总（饼图用）：type=""表示全部
+    QMap<QString, double> getCategoryStats(const QDate& start, const QDate& end, const QString& type = QString());
+    // 每日趋势（折线图用）：type=""表示全部
+    QMap<QString, double> getDailyStats(const QDate& start, const QDate& end, const QString& type = QString());
+
+    // --------------- 筛选搜索接口 ---------------
+    QList<TradeRecord> getRecordsByDate(const QDate& start, const QDate& end);
+    QList<TradeRecord> searchRecords(const QString& keyword);
 
     // --------------- 交易记录业务接口 ---------------
     bool addRecord(const TradeRecord& record);        // 添加记录（手动/支付宝）

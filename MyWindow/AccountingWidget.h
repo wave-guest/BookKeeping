@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QScopedPointer>
+#include <QDate>
 #include <DataCenter/TradeRecord.h>
 
 class AccountingWidgetPrivate;
@@ -22,6 +23,8 @@ signals:
     void addRecord(TradeRecord record);
     void updateRecord(TradeRecord record);
     void deleteRecord(QString id);
+    void filterRequested(QDate start, QDate end);
+    void searchRequested(QString keyword);
 
 private slots:
     // 左侧表单：添加/修改记录

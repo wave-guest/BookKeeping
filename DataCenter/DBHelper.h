@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <functional>
 
 // SQL接口
 class DBHelper
@@ -38,8 +37,5 @@ public:
 private:
     class Impl;
     std::unique_ptr<Impl> m_pImpl;
-
-	QueryResult submit(const std::function<QueryResult()>& task);
-	void workerLoop();
 
 };

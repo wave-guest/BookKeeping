@@ -366,6 +366,29 @@ MainWidget::MainWidget(QWidget* parent)
             updateBalanceCards();
         });
 
+    connect(d->analysisWidget, &AnalysisWidget::dataRequested, [this](QDate start, QDate end, QString type)
+    {
+        qDebug() << "图表数据请求:" << start << end << type;
+        auto catData = d_ptr->dataCenter.getCategoryStats(start, end, type);
+        auto dailyData = d_ptr->dataCenter.getDailyStats(start, end, type);
+        d_ptr->analysisWidget->loadPieData(catData);
+        d_ptr->analysisWidget->loadLineData(dailyData);
+    });
+
+    connect(d->accountingWidget, &AccountingWidget::filterRequested, [this](QDate start, QDate end)
+    {
+        qDebug() << "筛选记录:" << start << end;
+        auto list = d_ptr->dataCenter.getRecordsByDate(start, end);
+        d_ptr->accountingWidget->fillTable(list);
+    });
+
+    connect(d->accountingWidget, &AccountingWidget::searchRequested, [this](QString keyword)
+    {
+        qDebug() << "搜索记录:" << keyword;
+        auto list = d_ptr->dataCenter.searchRecords(keyword);
+        d_ptr->accountingWidget->fillTable(list);
+    });
+
     auto list = d_ptr->dataCenter.getAllRecords();
     d->accountingWidget->fillTable(list);
 
@@ -404,41 +427,27 @@ void MainWidget::updateBalanceCards()
 
 
     QDate today = QDate::currentDate();
-    Statistics stats = d->dataCenter.getStatistics(
-        TimeRange::Day,
-        today.year(),
-        today.month(),
-        today.day()
-    );
 
-    double totalIncome = d->dataCenter.getIncome(TimeRange::Total);
-	double totalExpense = d->dataCenter.getExpense(TimeRange::Total); 
-    double totalProfit = d->dataCenter.getProfit(TimeRange::Total);
-    double yearIncome = d->dataCenter.getIncome(TimeRange::Year, today.year());
-    double yearExpense = d->dataCenter.getExpense(TimeRange::Year, today.year());
-    double yearProfit = d->dataCenter.getProfit(TimeRange::Year, today.year());
-    double monthIncome = d->dataCenter.getIncome(TimeRange::Month, today.year(), today.month());
-    double monthExpense = d->dataCenter.getExpense(TimeRange::Month, today.year(), today.month());
-    double monthProfit = d->dataCenter.getProfit(TimeRange::Month, today.year(), today.month());
-    double dayIncome = d->dataCenter.getIncome(TimeRange::Day, today.year(), today.month(), today.day());
-    double dayExpense = d->dataCenter.getExpense(TimeRange::Day, today.year(), today.month(), today.day());
-    double dayProfit = d->dataCenter.getProfit(TimeRange::Day, today.year(), today.month(), today.day());
-    
-    d->incomeLabelMap["总收支"]->setText(d->toLocaleString(totalIncome));
-    d->expenseLabelMap["总收支"]->setText(d->toLocaleString(totalExpense));
-    d->profitLabelMap["总收支"]->setText(d->toLocaleString(totalProfit));
+    Statistics totalStats = d->dataCenter.getStatistics(TimeRange::Total);
+    Statistics yearStats = d->dataCenter.getStatistics(TimeRange::Year, today.year());
+    Statistics monthStats = d->dataCenter.getStatistics(TimeRange::Month, today.year(), today.month());
+    Statistics dayStats = d->dataCenter.getStatistics(TimeRange::Day, today.year(), today.month(), today.day());
 
-    d->incomeLabelMap["年收支"]->setText(d->toLocaleString(yearIncome));
-    d->expenseLabelMap["年收支"]->setText(d->toLocaleString(yearExpense));
-    d->profitLabelMap["年收支"]->setText(d->toLocaleString(yearProfit));
+    d->incomeLabelMap["总收支"]->setText(d->toLocaleString(totalStats.income));
+    d->expenseLabelMap["总收支"]->setText(d->toLocaleString(totalStats.expense));
+    d->profitLabelMap["总收支"]->setText(d->toLocaleString(totalStats.profit));
 
-    d->incomeLabelMap["月收支"]->setText(d->toLocaleString(monthIncome));
-    d->expenseLabelMap["月收支"]->setText(d->toLocaleString(monthExpense));
-    d->profitLabelMap["月收支"]->setText(d->toLocaleString(monthProfit));
+    d->incomeLabelMap["年收支"]->setText(d->toLocaleString(yearStats.income));
+    d->expenseLabelMap["年收支"]->setText(d->toLocaleString(yearStats.expense));
+    d->profitLabelMap["年收支"]->setText(d->toLocaleString(yearStats.profit));
+
+    d->incomeLabelMap["月收支"]->setText(d->toLocaleString(monthStats.income));
+    d->expenseLabelMap["月收支"]->setText(d->toLocaleString(monthStats.expense));
+    d->profitLabelMap["月收支"]->setText(d->toLocaleString(monthStats.profit));
      
-    d->incomeLabelMap["今日收支"]->setText(d->toLocaleString(stats.income));
-    d->expenseLabelMap["今日收支"]->setText(d->toLocaleString(stats.expense));
-    d->profitLabelMap["今日收支"]->setText(d->toLocaleString(stats.profit));
+    d->incomeLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.income));
+    d->expenseLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.expense));
+    d->profitLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.profit));
 
     d->titleLabelMap["年收支"]->setText(QString::number(today.year()) + "年收支");
     d->titleLabelMap["月收支"]->setText(QString::number(today.month()) + "月收支");

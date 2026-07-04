@@ -1,4 +1,4 @@
-#include "DataCenter.h"
+﻿#include "DataCenter.h"
 #include "DBHelper.h"
 
 #include <QCoreApplication>
@@ -43,7 +43,7 @@ bool DataCenter::addRecord(const TradeRecord& record)
 
     if (!res.success)
     {
-        qDebug() << "插入失败: " << res.error;
+        qDebug() << "鎻掑叆澶辫触: " << res.error;
     }
     return res.success;
 }
@@ -54,7 +54,7 @@ bool DataCenter::deleteRecord(int id)
     auto res = m_pImpl->helper.exec(sql, { std::to_string(id) });
     if (!res.success)
     {
-        qDebug() << "删除失败: " << res.error;
+        qDebug() << "鍒犻櫎澶辫触: " << res.error;
     }
     return res.success;
 }
@@ -89,7 +89,7 @@ bool DataCenter::updateRecord(const TradeRecord& record)
 
     if (!res.success)
     {
-        qDebug() << "更新失败: " << res.error;
+        qDebug() << "鏇存柊澶辫触: " << res.error;
     }
     return res.success;
 }
@@ -170,7 +170,7 @@ void DataCenter::initTables(const QString& dbPath)
     )");
     if (!res.success)
     {
-        qDebug() << "创建表失败: " << QString::fromStdString(res.error);
+        qDebug() << "鍒涘缓琛ㄥけ璐? " << QString::fromStdString(res.error);
     }
 }
 
@@ -179,8 +179,8 @@ Statistics DataCenter::getStatistics(TimeRange range, int year, int month, int d
     Statistics stats;
     std::string sql = R"(
         SELECT
-            COALESCE(SUM(CASE WHEN type = '收入' THEN amount ELSE 0 END), 0) as income,
-            COALESCE(SUM(CASE WHEN type = '支出' THEN amount ELSE 0 END), 0) as expense
+            COALESCE(SUM(CASE WHEN type = '鏀跺叆' THEN amount ELSE 0 END), 0) as income,
+            COALESCE(SUM(CASE WHEN type = '鏀嚭' THEN amount ELSE 0 END), 0) as expense
         FROM records
     )";
 
@@ -246,6 +246,139 @@ Statistics DataCenter::getDayStats(int year, int month, int day)
     return getStatistics(TimeRange::Day, year, month, day);
 }
 
+QMap<QString, double> DataCenter::getCategoryStats(const QDate& start, const QDate& end, const QString& type)
+{
+    QMap<QString, double> result;
+    std::string sql = R"(
+        SELECT category, SUM(amount) as total
+        FROM records
+        WHERE date >= ? AND date <= ?
+    )";
+
+    std::vector<std::string> params;
+    params.push_back(start.toString("yyyy-MM-dd").toStdString());
+    params.push_back(end.toString("yyyy-MM-dd").toStdString());
+
+    if (!type.isEmpty() && type != QStringLiteral("\u5168\u90e8"))
+    {
+        sql += " AND type = ?";
+        params.push_back(type.toStdString());
+    }
+    sql += " GROUP BY category ORDER BY total DESC";
+
+    auto res = m_pImpl->helper.query(sql, params);
+    if (res.success)
+    {
+        for (const auto& row : res.data)
+        {
+            if (row.size() >= 2)
+            {
+                result[QString::fromStdString(row[0])] = std::stod(row[1]);
+            }
+        }
+    }
+    return result;
+}
+
+QMap<QString, double> DataCenter::getDailyStats(const QDate& start, const QDate& end, const QString& type)
+{
+    QMap<QString, double> result;
+    std::string sql = R"(
+        SELECT date, SUM(amount) as total
+        FROM records
+        WHERE date >= ? AND date <= ?
+    )";
+
+    std::vector<std::string> params;
+    params.push_back(start.toString("yyyy-MM-dd").toStdString());
+    params.push_back(end.toString("yyyy-MM-dd").toStdString());
+
+    if (!type.isEmpty() && type != QStringLiteral("\u5168\u90e8"))
+    {
+        sql += " AND type = ?";
+        params.push_back(type.toStdString());
+    }
+    sql += " GROUP BY date ORDER BY date ASC";
+
+    auto res = m_pImpl->helper.query(sql, params);
+    if (res.success)
+    {
+        for (const auto& row : res.data)
+        {
+            if (row.size() >= 2)
+            {
+                result[QString::fromStdString(row[0])] = std::stod(row[1]);
+            }
+        }
+    }
+    return result;
+}
+
+QList<TradeRecord> DataCenter::getRecordsByDate(const QDate& start, const QDate& end)
+{
+    std::string sql = R"(
+        SELECT * FROM records
+        WHERE date >= ? AND date <= ?
+        ORDER BY date DESC;
+    )";
+
+    std::vector<std::string> params;
+    params.push_back(start.toString("yyyy-MM-dd").toStdString());
+    params.push_back(end.toString("yyyy-MM-dd").toStdString());
+
+    auto res = m_pImpl->helper.query(sql, params);
+    QList<TradeRecord> records;
+    if (res.success)
+    {
+        for (const auto& row : res.data)
+        {
+            TradeRecord record;
+            record.id = QString::fromStdString(row[0]);
+            record.trade_type = QString::fromStdString(row[1]);
+            record.trade_category = QString::fromStdString(row[2]);
+            record.source = QString::fromStdString(row[3]);
+            record.amount = std::stod(row[4]);
+            record.trade_time = QString::fromStdString(row[5]);
+            record.remark = QString::fromStdString(row[6]);
+            record.from = QString::fromStdString(row[7]);
+            record.to = QString::fromStdString(row[8]);
+            records.append(record);
+        }
+    }
+    return records;
+}
+
+QList<TradeRecord> DataCenter::searchRecords(const QString& keyword)
+{
+    std::string sql = R"(
+        SELECT * FROM records
+        WHERE remark LIKE ? OR CAST(amount AS TEXT) LIKE ?
+        ORDER BY date DESC;
+    )";
+
+    std::string pattern = "%" + keyword.toStdString() + "%";
+    auto res = m_pImpl->helper.query(sql, { pattern, pattern });
+    QList<TradeRecord> records;
+    if (res.success)
+    {
+        for (const auto& row : res.data)
+        {
+            TradeRecord record;
+            record.id = QString::fromStdString(row[0]);
+            record.trade_type = QString::fromStdString(row[1]);
+            record.trade_category = QString::fromStdString(row[2]);
+            record.source = QString::fromStdString(row[3]);
+            record.amount = std::stod(row[4]);
+            record.trade_time = QString::fromStdString(row[5]);
+            record.remark = QString::fromStdString(row[6]);
+            record.from = QString::fromStdString(row[7]);
+            record.to = QString::fromStdString(row[8]);
+            records.append(record);
+        }
+    }
+    return records;
+}
+
 double DataCenter::getIncome(TimeRange range, int year, int month, int day)
 {
     return getStatistics(range, year, month, day).income;
@@ -260,3 +393,4 @@ double DataCenter::getProfit(TimeRange range, int year, int month, int day)
 {
     return getStatistics(range, year, month, day).profit;
 }
+

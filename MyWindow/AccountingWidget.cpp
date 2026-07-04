@@ -536,9 +536,7 @@ void AccountingWidget::onFilterRecords()
         return;
     }
 
-    QMessageBox::information(this, "筛选",
-        QString("筛选日期范围：%1 至 %2\n\n筛选功能待对接数据层").arg(start.toString("yyyy-MM-dd"))
-        .arg(end.toString("yyyy-MM-dd")), QMessageBox::Ok);
+    emit filterRequested(start, end);
 }
 
 // 搜索记录
@@ -552,8 +550,7 @@ void AccountingWidget::onSearchRecords()
         return;
     }
 
-    QMessageBox::information(this, "搜索",
-        QString("搜索关键词：%1\n\n搜索功能待对接数据层").arg(keyword), QMessageBox::Ok);
+    emit searchRequested(keyword);
 }
 
 // 表格选中行变化
