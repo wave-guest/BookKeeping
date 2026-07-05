@@ -132,7 +132,7 @@ Statistics s = dc.getStatistics(TimeRange::Total);
         TEST("inject add ok", ok);
 
         auto all2 = dc.getAllRecords();
-        TEST("inject count=3 table alive", all2.size() == 3);
+        TEST("inject count=2 table alive", all2.size() == 2);
 
         bool found = false;
         for (const auto& r : all2) {

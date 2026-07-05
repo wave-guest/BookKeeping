@@ -179,7 +179,8 @@ void AnalysisWidget::onFilterChanged()
     emit dataRequested(
         d->startDateEdit->date(),
         d->endDateEdit->date(),
-        d->typeCombo->currentText()
+        d->typeCombo->currentText(),
+        d->categoryCombo->currentText()
     );
 }
 

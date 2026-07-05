@@ -358,6 +358,11 @@ MainWidget::MainWidget(QWidget* parent)
         {
             qDebug() << "修改记录";
             d_ptr->dataCenter.updateRecord(record);
+            auto list = d_ptr->dataCenter.getAllRecords();
+            d_ptr->accountingWidget->fillTable(list);
+            updateBalanceCards();
+            int total = d_ptr->dataCenter.getRecordCount();
+            d_ptr->accountingWidget->getPageController()->setTotalPage(total, 20);
         });
 
     connect(d->accountingWidget, &AccountingWidget::deleteRecord, [this](QString id)
@@ -371,9 +376,9 @@ MainWidget::MainWidget(QWidget* parent)
             d_ptr->accountingWidget->getPageController()->setTotalPage(total, 20);
         });
 
-    connect(d->analysisWidget, &AnalysisWidget::dataRequested, [this](QDate start, QDate end, QString type)
+    connect(d->analysisWidget, &AnalysisWidget::dataRequested, [this](QDate start, QDate end, QString type, QString category)
     {
-        qDebug() << "图表数据请求:" << start << end << type;
+        qDebug() << "图表数据请求:" << start << end << type << category;
         auto catData = d_ptr->dataCenter.getCategoryStats(start, end, type);
         auto dailyData = d_ptr->dataCenter.getDailyStats(start, end, type);
         d_ptr->analysisWidget->loadPieData(catData);

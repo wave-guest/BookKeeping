@@ -16,10 +16,6 @@ public:
 	void setTotalPage(int total, int pageSize = 20);
 
 signals:
-	void onFirstPage();
-	void onPrevPage();
-	void onNextPage();
-	void onLastPage();
 	void pageChanged(int page);
 
 private slots:

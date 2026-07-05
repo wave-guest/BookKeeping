@@ -79,7 +79,6 @@ void PageController::FirstPage()
 {
     m_pImpl->currentPage = 1;
     m_pImpl->updateUI();
-    emit onFirstPage();
     emit pageChanged(m_pImpl->currentPage);
 }
 
@@ -89,7 +88,6 @@ void PageController::PrevPage()
     {
         --m_pImpl->currentPage;
         m_pImpl->updateUI();
-        emit onPrevPage();
         emit pageChanged(m_pImpl->currentPage);
     }
 }
@@ -100,7 +98,6 @@ void PageController::NextPage()
     {
         ++m_pImpl->currentPage;
         m_pImpl->updateUI();
-        emit onNextPage();
         emit pageChanged(m_pImpl->currentPage);
     }
 }
@@ -109,6 +106,5 @@ void PageController::LastPage()
 {
     m_pImpl->currentPage = m_pImpl->totalPage;
     m_pImpl->updateUI();
-    emit onLastPage();
     emit pageChanged(m_pImpl->currentPage);
 }

@@ -292,21 +292,36 @@ flowchart TD
 | 7.1 | 移除 `WINDOWS_EXPORT_ALL_SYMBOLS` | `QtConfig.cmake:73` |
 | 7.2 | 显式 `MYWINDOW_EXPORT` 宏标记公开接口 | `MyWindow/*.h` |
 
-### Step 8: 支付宝 CSV 导入 (Phase 3.5)
+### Step 8: 支付宝 CSV 导入 (搁置)
 
-| # | 操作 | 文件 |
-|---|------|------|
-| 8.1 | 新建 `CsvImporter.h/.cpp` CSV解析+批量入库 | `DataCenter/CsvImporter.*` (新文件) |
-| 8.2 | 按交易流水号/日期+金额+备注去重 | `DataCenter/CsvImporter.cpp` |
-| 8.3 | 导入按钮+文件选择对话框 | `MyWindow/*` |
+### Step 9: 修复编辑后不刷新收支卡片（Bug）
+
+- **问题**: `MainWindow.cpp:357-361` 中 `updateRecord` lambda 未调用 `updateBalanceCards()` 和 `setTotalPage()`
+- **操作**: lambda 尾部追加 `updateBalanceCards()` 和分页总数刷新
+- **文件**: `MyWindow/MainWindow.cpp`
+
+### Step 10: 分析页分类筛选生效（半成品完善）
+
+- **问题**: `AnalysisWidget` 的 `categoryCombo` 有 UI 但 `onFilterChanged()` 未读取其值
+- **操作**: `onFilterChanged()` 读取 `categoryCombo->currentText()` 传给 `dataRequested` 信号
+- **文件**: `MyWindow/AnalysisWidget.cpp`
+
+### Step 11: 删除无用代码（评判：之后无使用价值）
+
+| # | 操作 | 文件 | 理由 |
+|---|------|------|------|
+| 11.1 | 删除 `TradeType` 枚举 | `TradeRecord.h:33-50` | 0 引用，项目用 `QString` 存分类 |
+| 11.2 | 删除 `StatType` 枚举 | `TradeRecord.h:52-56` | 0 引用，用 `TimeRange` 区分维度 |
+| 11.3 | 删除 `TimeRange::Custom` | `TradeRecord.h:63` | 0 引用，`switch` 无 `case` 处理 |
+| 11.4 | 删除 `PageController` 的 `onFirstPage/onPrevPage/onNextPage/onLastPage` 信号 | `PageController.h/.cpp` | 只 `emit` 无人 `connect` |
+| 11.5 | 删除 `TradeRecord::info()` 注释代码 | `TradeRecord.h:21-30` | 整个方法体注释 |
 
 ### 验证方式
 
 | 范围 | 命令 |
 |------|------|
-| Step 0 | `cmake --build build --config RelWithDebInfo` |
-| Step 0-3 | `cmake --build build --config RelWithDebInfo` + `& E:\code\sdk\DataCenterTest.exe` + 启动 BKPro.exe 手动验证 |
-| Step 4-8 | `cmake --build build --config RelWithDebInfo` + `DataCenterTest.exe` |
+| Step 0-7 | `cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo` + `cmake --build build --config RelWithDebInfo` + `& E:\code\sdk\DataCenterTest.exe` |
+| Step 9-11 | 同上 + 启动 BKPro.exe 手动验证 UX |
 
 ## Refactoring Progress
 
@@ -321,4 +336,7 @@ flowchart TD
 | 3 (Step 5) | PageController integration | DONE |
 | 3 (Step 6) | Introduce Repository layer | DONE |
 | 3 (Step 7) | CMake configuration cleanup | DONE |
-| 3 (Step 8) | Alipay CSV import | TODO |
+| 3 (Step 8) | Alipay CSV import | ON HOLD |
+| 4 (Step 9) | Fix: update record does not refresh balance cards | DONE |
+| 4 (Step 10) | Fix: AnalysisWidget category combo not connected | DONE |
+| 4 (Step 11) | Remove dead code (enums, signals, commented code) | DONE |

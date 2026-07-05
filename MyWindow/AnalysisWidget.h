@@ -26,7 +26,7 @@ public:
 
 signals:
     // 筛选条件变化时请求数据
-    void dataRequested(QDate start, QDate end, QString type);
+    void dataRequested(QDate start, QDate end, QString type, QString category);
 
 private slots:
     void onFilterChanged();
