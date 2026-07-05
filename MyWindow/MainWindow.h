@@ -3,15 +3,7 @@
 #include <QWidget>
 #include <QScopedPointer>
 
-#if defined(_MSC_VER) || defined(WIN32) || defined(_WIN32)
-#if defined(MYWINDOW_LIBRARY)
-#define MYWINDOW_EXPORT __declspec(dllexport)
-#else
-#define MYWINDOW_EXPORT __declspec(dllimport)
-#endif
-#else
-#define MYWINDOW_EXPORT
-#endif
+#include "Export.h"
 
 class MainWidgetPrivate;
 
@@ -21,7 +13,7 @@ class MYWINDOW_EXPORT MainWidget : public QWidget
         Q_DECLARE_PRIVATE(MainWidget)
 
 public:
-    explicit MainWidget(QWidget* parent = nullptr);
+    explicit MainWidget(const QString& dbPath, QWidget* parent = nullptr);
     ~MainWidget() override;
 
 private slots:

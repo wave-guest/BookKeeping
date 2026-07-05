@@ -2,7 +2,6 @@
 #include "RecordRepository.h"
 #include "DBHelper.h"
 
-#include <QCoreApplication>
 #include <QDate>
 #include <QDebug>
 #include <QString>
@@ -14,6 +13,7 @@
 class DataCenter::Impl
 {
 public:
+    QString dbPath;
     DBHelper helper;
     std::unique_ptr<RecordRepository> repo;
 
@@ -24,10 +24,11 @@ public:
     }
 };
 
-DataCenter::DataCenter(QObject* parent)
+DataCenter::DataCenter(const QString& dbPath, QObject* parent)
     : QObject(parent)
     , m_pImpl(std::make_unique<Impl>())
 {
+    m_pImpl->dbPath = dbPath;
 }
 
 DataCenter::~DataCenter()
@@ -73,16 +74,18 @@ TradeRecord DataCenter::getNewRecord()
     return m_pImpl->repo->fetchNewest();
 }
 
-void DataCenter::initTables(const QString& dbPath)
+bool DataCenter::initTables()
 {
-    QString path = dbPath.isEmpty()
-        ? QCoreApplication::applicationDirPath() + "/config/account.db"
-        : dbPath;
-    m_pImpl->helper.open(path.toStdString());
+    if (m_pImpl->dbPath.isEmpty()) {
+        qWarning() << "initTables: dbPath is empty, aborting";
+        return false;
+    }
+    m_pImpl->helper.open(m_pImpl->dbPath.toStdString());
     m_pImpl->ensureRepo();
     auto ok = m_pImpl->repo->initializeSchema();
     if (!ok)
         qDebug() << "创建表失败";
+    return ok;
 }
 
 Statistics DataCenter::getStatistics(TimeRange range, int year, int month, int day)
@@ -90,33 +93,7 @@ Statistics DataCenter::getStatistics(TimeRange range, int year, int month, int d
     m_pImpl->ensureRepo();
     Statistics stats;
 
-    std::string whereClause;
-    std::vector<std::string> params;
-
-    switch (range) {
-    case TimeRange::Total:
-        break;
-    case TimeRange::Year:
-        whereClause = " WHERE strftime('%Y', date) = ?";
-        params.push_back(std::to_string(year));
-        break;
-    case TimeRange::Month: {
-        char monthStr[8];
-        snprintf(monthStr, sizeof(monthStr), "%04d-%02d", year, month);
-        whereClause = " WHERE strftime('%Y-%m', date) = ?";
-        params.push_back(std::string(monthStr));
-        break;
-    }
-    case TimeRange::Day: {
-        char dayStr[11];
-        snprintf(dayStr, sizeof(dayStr), "%04d-%02d-%02d", year, month, day);
-        whereClause = " WHERE date = ?";
-        params.push_back(std::string(dayStr));
-        break;
-    }
-    }
-
-    auto ie = m_pImpl->repo->fetchIncomeExpense(whereClause, params);
+    auto ie = m_pImpl->repo->fetchIncomeExpense(range, year, month, day);
     stats.income = ie.income;
     stats.expense = ie.expense;
     stats.profit = stats.income - stats.expense;
@@ -154,6 +131,18 @@ QMap<QString, double> DataCenter::getDailyStats(const QDate& start, const QDate&
 {
     m_pImpl->ensureRepo();
     return m_pImpl->repo->fetchDailyStats(start, end, type);
+}
+
+QStringList DataCenter::getCategoryList(const QString& type)
+{
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchCategoryList(type);
+}
+
+QStringList DataCenter::getAccountList(const QString& role)
+{
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchAccountList(role);
 }
 
 QList<TradeRecord> DataCenter::getRecordsByDate(const QDate& start, const QDate& end)

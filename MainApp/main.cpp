@@ -5,7 +5,6 @@
 #include <QDebug>
 
 #include <MyWindow/MainWindow.h>
-#include <DataCenter/DataCenter.h>
 
 int main(int argc, char *argv[])
 {
@@ -30,7 +29,8 @@ int main(int argc, char *argv[])
         qDebug() << "样式文件加载失败:" << styleFile.fileName();
     }
 
-    MainWidget w;
+    QString dbPath = QCoreApplication::applicationDirPath() + "/config/account.db";
+    MainWidget w(dbPath);
     w.show();
 
     return a.exec();

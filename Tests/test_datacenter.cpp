@@ -51,8 +51,8 @@ QDir(dbDir).removeRecursively();
     QString dbFile = dbDir + "/account.db";
 
     {
-        DataCenter dc;
-        dc.initTables(dbFile);
+        DataCenter dc(dbFile);
+        dc.initTables();
 
         // use \uXXXX escapes for Chinese chars to avoid source encoding issues
         auto r1 = makeRec(

@@ -6,6 +6,7 @@
 #include <QList>
 #include <QMap>
 #include <QString>
+#include <QStringList>
 
 #include "TradeRecord.h"
 #include "DBHelper.h"
@@ -32,13 +33,16 @@ public:
         double income = 0;
         double expense = 0;
     };
-    IncomeExpense fetchIncomeExpense(const std::string& whereClause,
-                                     const std::vector<std::string>& params);
+    IncomeExpense fetchIncomeExpense(TimeRange range, int year = 0, int month = 0, int day = 0);
 
     QMap<QString, double> fetchCategoryStats(const QDate& start, const QDate& end,
                                               const QString& type);
     QMap<QString, double> fetchDailyStats(const QDate& start, const QDate& end,
                                            const QString& type);
+
+    // 分类/账户列表
+    QStringList fetchCategoryList(const QString& type);
+    QStringList fetchAccountList(const QString& role);
 
     // 筛选搜索
     QList<TradeRecord> fetchByDateRange(const QDate& start, const QDate& end);

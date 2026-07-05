@@ -5,6 +5,7 @@
 #include <QDate>
 #include <QList>
 #include <QMap>
+#include <QStringList>
 
 #include "TradeRecord.h"
 
@@ -22,10 +23,10 @@ class DATA_CENTER_EXPORT DataCenter : public QObject
 {
     Q_OBJECT
 public:
-    explicit DataCenter(QObject* parent = nullptr);
+    explicit DataCenter(const QString& dbPath, QObject* parent = nullptr);
     ~DataCenter() override;
 
-    void initTables(const QString& dbPath = QString());
+    bool initTables();
     // 核心统计接口（一个函数搞定所有）
     Statistics getStatistics(TimeRange range,
         int year = 0,
@@ -49,6 +50,10 @@ public:
     QMap<QString, double> getCategoryStats(const QDate& start, const QDate& end, const QString& type = QString());
     // 每日趋势（折线图用）：type=""表示全部
     QMap<QString, double> getDailyStats(const QDate& start, const QDate& end, const QString& type = QString());
+
+    // --------------- 分类/账户接口 ---------------
+    QStringList getCategoryList(const QString& type);
+    QStringList getAccountList(const QString& role);
 
     // --------------- 筛选搜索接口 ---------------
     QList<TradeRecord> getRecordsByDate(const QDate& start, const QDate& end);

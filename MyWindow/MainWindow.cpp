@@ -18,7 +18,7 @@
 class MainWidgetPrivate
 {
 public:
-    MainWidgetPrivate(MainWidget* q) : q_ptr(q) {}
+    MainWidgetPrivate(const QString& dbPath, MainWidget* q) : q_ptr(q), dataCenter(dbPath) {}
 
     // 初始化整体布局
     void initLayout();
@@ -27,7 +27,8 @@ public:
     // 初始化右侧内容区
     void initRightContent();
     // 创建收支汇总卡片
-    QWidget* createSummaryCard(const QString& title,
+    QWidget* createSummaryCard(const QString& role,
+        const QString& title,
         const QString& incomeText,
         const QString& expenseText);
 
@@ -142,7 +143,7 @@ void MainWidgetPrivate::initRightContent()
     cardLayout->setContentsMargins(0, 0, 0, 0);
     cardLayout->setSpacing(15);
 
-    QStringList cardNames = { "cardTotal", "cardYear", "cardMonth", "cardDay" };
+    QStringList cardRoles = { "total", "year", "month", "day" };
     QStringList cardTitles = {
         QStringLiteral("\U0001f310 \u603b\u6536\u652f"),
         QStringLiteral("\U0001f4c5 \u5e74\u6536\u652f"),
@@ -150,10 +151,10 @@ void MainWidgetPrivate::initRightContent()
         QStringLiteral("\U0001f31e \u4eca\u65e5\u6536\u652f")
     };
 
-    for (int i = 0; i < cardNames.size(); ++i)
+    for (int i = 0; i < cardRoles.size(); ++i)
     {
-        QWidget* card = createSummaryCard(cardTitles[i], QStringLiteral("\u00a50.00"), QStringLiteral("\u00a50.00"));
-        card->setObjectName(cardNames[i]);
+        QWidget* card = createSummaryCard(cardRoles[i], cardTitles[i], QStringLiteral("\u00a50.00"), QStringLiteral("\u00a50.00"));
+        card->setObjectName("card" + QString(cardRoles[i][0].toUpper()) + cardRoles[i].mid(1));
         cardLayout->addWidget(card);
     }
 
@@ -185,7 +186,8 @@ void MainWidgetPrivate::initRightContent()
 }
 
 // 创建收支汇总卡片
-QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
+QWidget* MainWidgetPrivate::createSummaryCard(const QString& role,
+    const QString& title,
     const QString& incomeText,
     const QString& expenseText)
 {
@@ -199,7 +201,7 @@ QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     // 卡片标题
     QLabel* titleLabel = new QLabel(title, card);
     titleLabel->setProperty("cardRole", "cardTitle");
-    titleLabelMap[title] = titleLabel;
+    titleLabelMap[role] = titleLabel;
     cardLayout->addWidget(titleLabel);
 
     // 收入
@@ -207,7 +209,7 @@ QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     incomeTitle->setProperty("cardRole", "cardIncomeLabel");
     QLabel* incomeValue = new QLabel(incomeText, card);
     incomeValue->setProperty("cardRole", "cardIncomeValue");
-    incomeLabelMap[title] = incomeValue;
+    incomeLabelMap[role] = incomeValue;
     cardLayout->addWidget(incomeTitle);
     cardLayout->addWidget(incomeValue);
 
@@ -216,7 +218,7 @@ QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     expenseTitle->setProperty("cardRole", "cardExpenseLabel");
     QLabel* expenseValue = new QLabel(expenseText, card);
     expenseValue->setProperty("cardRole", "cardExpenseValue");
-    expenseLabelMap[title] = expenseValue;
+    expenseLabelMap[role] = expenseValue;
     cardLayout->addWidget(expenseTitle);
     cardLayout->addWidget(expenseValue);
 
@@ -225,7 +227,7 @@ QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     profitTitle->setProperty("cardRole", "cardProfitLabel");
     QLabel* profitValue = new QLabel(QStringLiteral("\u00a50.00"), card);
     profitValue->setProperty("cardRole", "cardProfitValue");
-    profitLabelMap[title] = profitValue;
+    profitLabelMap[role] = profitValue;
     cardLayout->addWidget(profitTitle);
     cardLayout->addWidget(profitValue);
 
@@ -242,9 +244,9 @@ QString MainWidgetPrivate::toLocaleString(double amount)
 }
 
 // 外部类实现
-MainWidget::MainWidget(QWidget* parent)
+MainWidget::MainWidget(const QString& dbPath, QWidget* parent)
     : QWidget(parent)
-    , d_ptr(new MainWidgetPrivate(this))
+    , d_ptr(new MainWidgetPrivate(dbPath, this))
 {
     Q_D(MainWidget);
     d->initLayout();
@@ -269,6 +271,23 @@ MainWidget::MainWidget(QWidget* parent)
         });
 
     d_ptr->dataCenter.initTables();
+
+    // 从数据库加载分类/账户列表，替换 UI 层硬编码
+    {
+        auto incCats = d_ptr->dataCenter.getCategoryList(QStringLiteral("\u6536\u5165"));
+        auto expCats = d_ptr->dataCenter.getCategoryList(QStringLiteral("\u652f\u51fa"));
+        auto fromAccs = d_ptr->dataCenter.getAccountList("from");
+        auto toAccs = d_ptr->dataCenter.getAccountList("to");
+        d->accountingWidget->loadCategoryLists(incCats, expCats, fromAccs, toAccs);
+
+        // 合并所有分类用于分析页
+        QStringList allCats = incCats;
+        for (const auto& c : expCats) {
+            if (!allCats.contains(c)) allCats << c;
+        }
+        d->analysisWidget->loadCategoryList(allCats);
+    }
+
     connect(d->accountingWidget, &AccountingWidget::addRecord, [this](TradeRecord record)
         {
             qDebug() << "添加记录";
@@ -384,23 +403,23 @@ void MainWidget::updateBalanceCards()
     Statistics monthStats = d->dataCenter.getStatistics(TimeRange::Month, today.year(), today.month());
     Statistics dayStats = d->dataCenter.getStatistics(TimeRange::Day, today.year(), today.month(), today.day());
 
-    d->incomeLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.income));
-    d->expenseLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.expense));
-    d->profitLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.profit));
+    d->incomeLabelMap["total"]->setText(d->toLocaleString(totalStats.income));
+    d->expenseLabelMap["total"]->setText(d->toLocaleString(totalStats.expense));
+    d->profitLabelMap["total"]->setText(d->toLocaleString(totalStats.profit));
 
-    d->incomeLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.income));
-    d->expenseLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.expense));
-    d->profitLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.profit));
+    d->incomeLabelMap["year"]->setText(d->toLocaleString(yearStats.income));
+    d->expenseLabelMap["year"]->setText(d->toLocaleString(yearStats.expense));
+    d->profitLabelMap["year"]->setText(d->toLocaleString(yearStats.profit));
 
-    d->incomeLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.income));
-    d->expenseLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.expense));
-    d->profitLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.profit));
+    d->incomeLabelMap["month"]->setText(d->toLocaleString(monthStats.income));
+    d->expenseLabelMap["month"]->setText(d->toLocaleString(monthStats.expense));
+    d->profitLabelMap["month"]->setText(d->toLocaleString(monthStats.profit));
      
-    d->incomeLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.income));
-    d->expenseLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.expense));
-    d->profitLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.profit));
+    d->incomeLabelMap["day"]->setText(d->toLocaleString(dayStats.income));
+    d->expenseLabelMap["day"]->setText(d->toLocaleString(dayStats.expense));
+    d->profitLabelMap["day"]->setText(d->toLocaleString(dayStats.profit));
 
-    d->titleLabelMap["📅 年收支"]->setText(QString::number(today.year()) + "年收支");
-    d->titleLabelMap["📆 月收支"]->setText(QString::number(today.month()) + "月收支");
-    d->titleLabelMap["🌞 今日收支"]->setText(QString::number(today.month()) + "月" + QString::number(today.day()) + "日收支");
+    d->titleLabelMap["year"]->setText(QString::number(today.year()) + "年收支");
+    d->titleLabelMap["month"]->setText(QString::number(today.month()) + "月收支");
+    d->titleLabelMap["day"]->setText(QString::number(today.month()) + "月" + QString::number(today.day()) + "日收支");
 }

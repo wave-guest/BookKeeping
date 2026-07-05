@@ -3,7 +3,7 @@
 #include <memory>
 #include <QWidget>
 
-#include "MainWindow.h"
+#include "Export.h"
 
 class MYWINDOW_EXPORT PageController : public QWidget
 {

@@ -5,7 +5,7 @@
 #include <QDate>
 #include <DataCenter/TradeRecord.h>
 
-#include "MainWindow.h"
+#include "Export.h"
 
 class AccountingWidgetPrivate;
 class PageController;
@@ -21,6 +21,8 @@ public:
 
     void fillTable(const QList<TradeRecord>& list);
     void afterAddRecord(TradeRecord record);
+    void loadCategoryLists(const QStringList& incomeCats, const QStringList& expenseCats,
+                           const QStringList& fromAccounts, const QStringList& toAccounts);
     PageController* getPageController() const;
 
 signals:

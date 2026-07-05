@@ -52,6 +52,12 @@ public:
     QComboBox* fromCombo;    // 来源账户
     QComboBox* toCombo;      // 去向账户
 
+    // 分类/账户列表（由 MainWindow 传入）
+    QStringList incomeCats = { QStringLiteral("\u5de5\u8d44"), QStringLiteral("\u5956\u91d1"), QStringLiteral("\u623f\u79df\u8865\u8d34"), QStringLiteral("\u7406\u8d22"), QStringLiteral("\u517c\u804c"), QStringLiteral("\u62a5\u9500"), QStringLiteral("\u5176\u4ed6\u6536\u5165") };
+    QStringList expenseCats = { QStringLiteral("\u9910\u996e"), QStringLiteral("\u5976\u8336"), QStringLiteral("\u7535\u5b50\u4ea7\u54c1"), QStringLiteral("\u4ea4\u901a"), QStringLiteral("\u8d2d\u7269"), QStringLiteral("\u623f\u79df"), QStringLiteral("\u5a31\u4e50"), QStringLiteral("\u62a5\u9500"), QStringLiteral("\u5176\u4ed6\u652f\u51fa") };
+    QStringList fromAccounts = { QStringLiteral("\u5de5\u5546\u94f6\u884c"), QStringLiteral("\u5efa\u8bbe\u94f6\u884c"), QStringLiteral("\u5357\u4eac\u94f6\u884c"), QStringLiteral("\u6c5f\u9634\u519c\u5546\u94f6\u884c"), QStringLiteral("\u4ea4\u901a\u94f6\u884c"), QStringLiteral("\u5fae\u4fe1"), QStringLiteral("\u652f\u4ed8\u5b9d") };
+    QStringList toAccounts = { QStringLiteral("\u7f8e\u56e2"), QStringLiteral("\u6dd8\u5b9d"), QStringLiteral("\u4eac\u4e1c"), QStringLiteral("\u79df\u623f\u4e2d\u4ecb"), QStringLiteral("\u95f2\u9c7c"), QStringLiteral("\u6296\u97f3"), QStringLiteral("\u653f\u5e9c"), QStringLiteral("\u7b2c\u4e09\u65b9") };
+
     // 右侧查询控件
     QLineEdit* searchEdit;        // 搜索框
     QDateEdit* startDateEdit;     // 筛选开始日期
@@ -185,10 +191,7 @@ void AccountingWidgetPrivate::initLeftForm()
 
     // 收支分类
     categoryCombo = new QComboBox(leftFormWidget);
-    QStringList incomeCats = { "工资", "奖金", "房租补贴", "理财", "兼职", "报销", "其他收入" };
-    QStringList expenseCats = { "餐饮", "奶茶", "电子产品", "交通", "购物", "房租", "娱乐", "报销", "其他支出" };
-    QStringList fromCats = { "工商银行", "建设银行", "南京银行", "江阴农商银行", "交通银行", "微信", "支付宝" };
-    QStringList toCats = { "美团", "淘宝", "京东", "租房中介", "闲鱼", "抖音", "政府", "第三方" };
+    categoryCombo->setEditable(true);
     categoryCombo->addItems(expenseCats);
     leftFormLayout->addWidget(new QLabel("收支分类:", leftFormWidget));
     leftFormLayout->addWidget(categoryCombo);
@@ -219,24 +222,24 @@ void AccountingWidgetPrivate::initLeftForm()
     leftFormLayout->addWidget(saveBtn);
 
     // 切换分类的信号
-    QObject::connect(incomeRadio, &QRadioButton::toggled, q_ptr, [=](bool checked) {
+    QObject::connect(incomeRadio, &QRadioButton::toggled, q_ptr, [this](bool checked) {
         if (checked) {
             categoryCombo->clear();
             categoryCombo->addItems(incomeCats);
             fromCombo->clear();
-            fromCombo->addItems(toCats);
+            fromCombo->addItems(toAccounts);
 			toCombo->clear();
-			toCombo->addItems(fromCats);
+			toCombo->addItems(fromAccounts);
         }
         });
-    QObject::connect(expenseRadio, &QRadioButton::toggled, q_ptr, [=](bool checked) {
+    QObject::connect(expenseRadio, &QRadioButton::toggled, q_ptr, [this](bool checked) {
         if (checked) {
             categoryCombo->clear();
             categoryCombo->addItems(expenseCats);
             fromCombo->clear();
-            fromCombo->addItems(fromCats);
+            fromCombo->addItems(fromAccounts);
             toCombo->clear();
-            toCombo->addItems(toCats);
+            toCombo->addItems(toAccounts);
 
         }
         });
@@ -533,4 +536,15 @@ void AccountingWidget::onTableSelectionChanged()
     bool hasSelection = d->recordTable->currentRow() >= 0;
     d->deleteBtn->setEnabled(hasSelection);
     d->editBtn->setEnabled(hasSelection);
+}
+
+void AccountingWidget::loadCategoryLists(
+    const QStringList& incomeCats, const QStringList& expenseCats,
+    const QStringList& fromAccounts, const QStringList& toAccounts)
+{
+    Q_D(AccountingWidget);
+    if (!incomeCats.isEmpty())    d->incomeCats = incomeCats;
+    if (!expenseCats.isEmpty())   d->expenseCats = expenseCats;
+    if (!fromAccounts.isEmpty())  d->fromAccounts = fromAccounts;
+    if (!toAccounts.isEmpty())    d->toAccounts = toAccounts;
 }

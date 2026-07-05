@@ -7,7 +7,7 @@
 #include <QString>
 #include <QtCharts>
 
-#include "MainWindow.h"
+#include "Export.h"
 
 class AnalysisWidgetPrivate;
 
@@ -23,6 +23,7 @@ public:
     // MainWidget 调用回填数据
     void loadPieData(const QMap<QString, double>& categoryData);
     void loadLineData(const QMap<QString, double>& dailyData);
+    void loadCategoryList(const QStringList& categories);
 
 signals:
     // 筛选条件变化时请求数据

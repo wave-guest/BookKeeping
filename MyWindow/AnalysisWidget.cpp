@@ -32,6 +32,9 @@ public:
     QMap<QString, double> cachedCategoryData;
     QMap<QString, double> cachedDailyData;
 
+    // 分类列表（由 MainWindow 传入）
+    QStringList categoryList;
+
     AnalysisWidget* q_ptr;
 };
 
@@ -58,7 +61,8 @@ void AnalysisWidgetPrivate::initUI()
 
     row1->addWidget(new QLabel(QStringLiteral("\u7c7b\u522b:")));
     categoryCombo = new QComboBox(q_ptr);
-    categoryCombo->addItems({ QStringLiteral("\u5168\u90e8"), QStringLiteral("\u9910\u996e"), QStringLiteral("\u4ea4\u901a"), QStringLiteral("\u5de5\u8d44"), QStringLiteral("\u8d2d\u7269"), QStringLiteral("\u623f\u79df") });
+    categoryCombo->addItem(QStringLiteral("\u5168\u90e8"));
+    categoryCombo->addItems(categoryList);
     row1->addWidget(categoryCombo);
 
     row1->addWidget(new QLabel(QStringLiteral("\u56fe\u8868\u7c7b\u578b:")));
@@ -207,5 +211,16 @@ void AnalysisWidget::onChartTypeChanged()
     else
     {
         loadLineData(d->cachedDailyData);
+    }
+}
+
+void AnalysisWidget::loadCategoryList(const QStringList& categories)
+{
+    Q_D(AnalysisWidget);
+    d->categoryList = categories;
+    if (d->categoryCombo) {
+        d->categoryCombo->clear();
+        d->categoryCombo->addItem(QStringLiteral("\u5168\u90e8"));
+        d->categoryCombo->addItems(categories);
     }
 }
