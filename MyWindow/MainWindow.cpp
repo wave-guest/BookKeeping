@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "AccountingWidget.h"
 #include "AnalysisWidget.h"
+#include "PageController.h"
 
 #include <DataCenter/DataCenter.h>
 
@@ -346,9 +347,11 @@ MainWidget::MainWidget(QWidget* parent)
     connect(d->accountingWidget, &AccountingWidget::addRecord, [this](TradeRecord record)
         {
             qDebug() << "添加记录";
-            d_ptr->dataCenter.addRecord(record);        // 添加记录
-            auto res = d_ptr->dataCenter.getNewRecord();// 查询结果
-            d_ptr->accountingWidget->afterAddRecord(res);// 更新界面
+            d_ptr->dataCenter.addRecord(record);
+            auto res = d_ptr->dataCenter.getNewRecord();
+            d_ptr->accountingWidget->afterAddRecord(res);
+            int total = d_ptr->dataCenter.getRecordCount();
+            d_ptr->accountingWidget->getPageController()->setTotalPage(total, 20);
         });
 
     connect(d->accountingWidget, &AccountingWidget::updateRecord, [this](TradeRecord record)
@@ -364,6 +367,8 @@ MainWidget::MainWidget(QWidget* parent)
             auto list = d_ptr->dataCenter.getAllRecords();
             d_ptr->accountingWidget->fillTable(list);
             updateBalanceCards();
+            int total = d_ptr->dataCenter.getRecordCount();
+            d_ptr->accountingWidget->getPageController()->setTotalPage(total, 20);
         });
 
     connect(d->analysisWidget, &AnalysisWidget::dataRequested, [this](QDate start, QDate end, QString type)
@@ -389,8 +394,18 @@ MainWidget::MainWidget(QWidget* parent)
         d_ptr->accountingWidget->fillTable(list);
     });
 
+    connect(d->accountingWidget, &AccountingWidget::pageRequested, [this](int page)
+    {
+        qDebug() << "分页请求, page:" << page;
+        auto list = d_ptr->dataCenter.getRecords(page, 20);
+        d_ptr->accountingWidget->fillTable(list);
+    });
+
     auto list = d_ptr->dataCenter.getAllRecords();
     d->accountingWidget->fillTable(list);
+
+    int totalCount = d_ptr->dataCenter.getRecordCount();
+    d->accountingWidget->getPageController()->setTotalPage(totalCount, 20);
 
     // 初始化卡片数据
     updateBalanceCards();

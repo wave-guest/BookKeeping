@@ -76,6 +76,13 @@ State your plan before modifying. For any deletion, ask the user first. For any 
 - When refactoring: the old and new behavior MUST be identical. Verify after refactoring.
 - After modifying a .h file: ALWAYS run `cmake -S . -B build` before building.
 
+### Step 0: Update AGENTS.md
+
+- Upon completing each step, immediately update AGENTS.md:
+  - Mark the step as **DONE** in the **Refactoring Progress** table.
+  - Mark corresponding entries in **Known Issues** as ~~strikethrough~~ with "→ **已修复 (Step N)**".
+  - Remove or update the step's detailed instructions from **Execution Checklist**.
+
 ### Step 4: Build
 
 ```powershell
@@ -94,7 +101,16 @@ chcp 65001
 - After modifying existing logic, verify all existing tests still pass.
 - Never write test data to the production database. Use initTables(tempPath).
 
-### Step 6: Commit
+### Step 6: Summarize
+
+Upon completing execution, provide a summary covering:
+- **修改内容**: 什么文件变了，变的内容是什么
+- **问题**: 执行过程中遇到的问题
+- **解决方案**: 问题如何解决
+- **计划同步**: AGENTS.md 的 Refactoring Progress / Known Issues / Execution Checklist 是否已更新
+- **下一步**: 如果还有剩余 TODO，说明下一步预期做什么；如果所有计划完成，则明确说明"所有步骤已完成"
+
+### Step 7: Commit
 
 ```
 <type>: <short description>
@@ -168,8 +184,9 @@ E:\code\BookKeeping/
 │
 ├── DataCenter/               # [DLL] 数据层（DataCenter.dll）
 │   ├── TradeRecord.h         # 纯模型：TradeRecord, Statistics, TradeType, StatType, TimeRange
-│   ├── DataCenter.h/.cpp     # Facade：CRUD + 统计(getStatistics) + 分类/每日统计 + 筛选搜索
-│   ├── DBHelper.h/.cpp       # SQLite封装：PIMPL + 后台线程 + 任务队列（伪异步）
+│   ├── RecordRepository.h/.cpp # Repository：所有SQL语句 + 行解析，内部被DataCenter调用
+│   ├── DataCenter.h/.cpp     # Facade：业务编排，调用Repository接口
+│   ├── DBHelper.h/.cpp       # SQLite封装：纯同步，参数化查询
 │   └── CMakeLists.txt        # 依赖 sqlite3
 │
 ├── Tests/                    # [EXE] 测试（DataCenterTest.exe）
@@ -199,9 +216,9 @@ UI组件**不持有**DataCenter引用，全经过MainWindow协调。
 2. ~~**AnalysisWidget::dataRequested 信号无人连接**~~ → **已修复 (Step 1)**
 3. **筛选/搜索** UI层是存根（仅弹框），DataCenter层已有完整实现未连通
 4. **updateBalanceCards** 12次独立SQL调用，可合并为4次
-5. **PageController** 编译但无人使用
+5. ~~**PageController** 编译但无人使用~~ → **已修复 (Step 5)**
 6. **DBHelper** 伪异步（线程+queue+mutex+cv+future.get阻塞）
-7. **WINDOWS_EXPORT_ALL_SYMBOLS** 导出所有DLL符号
+7. ~~**WINDOWS_EXPORT_ALL_SYMBOLS** 导出所有DLL符号~~ → **已修复 (Step 7)**
 
 ## Execution Checklist
 
@@ -263,8 +280,10 @@ flowchart TD
 
 | # | 操作 | 文件 |
 |---|------|------|
-| 6.1 | 新建 `RecordRepository.h/.cpp`，抽取所有SQL语句 | `DataCenter/RecordRepository.*` (新文件) |
+| 6.1 | 新建 `RecordRepository.h/.cpp`，抽取所有SQL语句+行解析 | `DataCenter/RecordRepository.*` (新文件) |
 | 6.2 | DataCenter 改为仅编排业务，调用 Repository 接口 | `DataCenter/DataCenter.cpp` |
+| 6.3 | 私有助手 `parseRecord()` 消除4处重复的行解析代码 | `DataCenter/RecordRepository.cpp` |
+- **验证**: 30个测试通过29个（`inject count=3` 为重构前已有失败，非本次引入）
 
 ### Step 7: CMake 配置清理 (Phase 3.4)
 
@@ -299,7 +318,7 @@ flowchart TD
 | 2 (Step 2) | Implement filter/search functionality | DONE |
 | 2 (Step 3) | Merge updateBalanceCards redundant queries | DONE |
 | 3 (Step 4) | DBHelper async model simplification | DONE |
-| 3 (Step 5) | PageController integration | TODO |
-| 3 (Step 6) | Introduce Repository layer | TODO |
-| 3 (Step 7) | CMake configuration cleanup | TODO |
+| 3 (Step 5) | PageController integration | DONE |
+| 3 (Step 6) | Introduce Repository layer | DONE |
+| 3 (Step 7) | CMake configuration cleanup | DONE |
 | 3 (Step 8) | Alipay CSV import | TODO |

@@ -5,9 +5,12 @@
 #include <QDate>
 #include <DataCenter/TradeRecord.h>
 
-class AccountingWidgetPrivate;
+#include "MainWindow.h"
 
-class AccountingWidget : public QWidget
+class AccountingWidgetPrivate;
+class PageController;
+
+class MYWINDOW_EXPORT AccountingWidget : public QWidget
 {
     Q_OBJECT
         Q_DECLARE_PRIVATE(AccountingWidget)
@@ -18,6 +21,7 @@ public:
 
     void fillTable(const QList<TradeRecord>& list);
     void afterAddRecord(TradeRecord record);
+    PageController* getPageController() const;
 
 signals:
     void addRecord(TradeRecord record);
@@ -25,6 +29,7 @@ signals:
     void deleteRecord(QString id);
     void filterRequested(QDate start, QDate end);
     void searchRequested(QString keyword);
+    void pageRequested(int page);
 
 private slots:
     // 左侧表单：添加/修改记录

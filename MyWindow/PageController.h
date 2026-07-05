@@ -3,7 +3,9 @@
 #include <memory>
 #include <QWidget>
 
-class PageController : public QWidget
+#include "MainWindow.h"
+
+class MYWINDOW_EXPORT PageController : public QWidget
 {
 	Q_OBJECT
 public:
@@ -18,6 +20,7 @@ signals:
 	void onPrevPage();
 	void onNextPage();
 	void onLastPage();
+	void pageChanged(int page);
 
 private slots:
 	void FirstPage();

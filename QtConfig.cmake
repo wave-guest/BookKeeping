@@ -68,10 +68,8 @@ function(setup_qt_library TARGET_NAME)
 			/wd4273  # 禁用不一致的dll链接警告
 		)
 		
-		# 设置导出所有符号
-		set_target_properties(${TARGET_NAME} PROPERTIES
-			WINDOWS_EXPORT_ALL_SYMBOLS ON
-		)
+		# 导出宏由各模块头文件自行控制（DATA_CENTER_EXPORT / MYWINDOW_EXPORT）
+		# 不再使用 WINDOWS_EXPORT_ALL_SYMBOLS
 	endif()
 	
 endfunction()

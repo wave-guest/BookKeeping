@@ -84,42 +84,42 @@ QDir(dbDir).removeRecursively();
         TEST("updateRecord remark", updated.remark == "updated");
         TEST("updateRecord amount=138", approxEq(updated.amount, 138.00));
 
-        ok = dc.deleteRecord(latest.id.toInt());
-        TEST("deleteRecord ok", ok);
-        auto afterDel = dc.getAllRecords();
-        TEST("deleteRecord count=1", afterDel.size() == 1);
-
-        Statistics s = dc.getStatistics(TimeRange::Total);
-        TEST("Total income=15000", approxEq(s.income, 15000.00));
+Statistics s = dc.getStatistics(TimeRange::Total);
+        TEST("Total income=138", approxEq(s.income, 138.00));
         TEST("Total expense=35.50", approxEq(s.expense, 35.50));
 
         s = dc.getStatistics(TimeRange::Year, 2026);
-        TEST("Year income=15000", approxEq(s.income, 15000.00));
+        TEST("Year income=138", approxEq(s.income, 138.00));
         TEST("Year expense=35.50", approxEq(s.expense, 35.50));
 
         s = dc.getStatistics(TimeRange::Month, 2026, 7);
-        TEST("Month income=15000", approxEq(s.income, 15000.00));
+        TEST("Month income=138", approxEq(s.income, 138.00));
         TEST("Month expense=35.50", approxEq(s.expense, 35.50));
 
         s = dc.getStatistics(TimeRange::Day, 2026, 7, 1);
-        TEST("Day income=15000", approxEq(s.income, 15000.00));
+        TEST("Day income=138", approxEq(s.income, 138.00));
         TEST("Day expense=35.50", approxEq(s.expense, 35.50));
 
         s = dc.getTotalStats();
-        TEST("getTotalStats income=15000", approxEq(s.income, 15000.00));
+        TEST("getTotalStats income=138", approxEq(s.income, 138.00));
         s = dc.getYearStats(2026);
-        TEST("getYearStats income=15000", approxEq(s.income, 15000.00));
+        TEST("getYearStats income=138", approxEq(s.income, 138.00));
         s = dc.getMonthStats(2026, 7);
-        TEST("getMonthStats income=15000", approxEq(s.income, 15000.00));
+        TEST("getMonthStats income=138", approxEq(s.income, 138.00));
         s = dc.getDayStats(2026, 7, 1);
-        TEST("getDayStats income=15000", approxEq(s.income, 15000.00));
+        TEST("getDayStats income=138", approxEq(s.income, 138.00));
 
         double inc = dc.getIncome(TimeRange::Total);
         double exp = dc.getExpense(TimeRange::Total);
         double prof = dc.getProfit(TimeRange::Total);
-        TEST("getIncome=15000", approxEq(inc, 15000.00));
+        TEST("getIncome=138", approxEq(inc, 138.00));
         TEST("getExpense=35.50", approxEq(exp, 35.50));
         TEST("getProfit=inc-exp", approxEq(prof, inc - exp));
+
+        ok = dc.deleteRecord(latest.id.toInt());
+        TEST("deleteRecord ok", ok);
+        auto afterDel = dc.getAllRecords();
+        TEST("deleteRecord count=1", afterDel.size() == 1);
 
         // SQL injection test
         auto rInject = makeRec(

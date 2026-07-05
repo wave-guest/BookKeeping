@@ -7,9 +7,11 @@
 #include <QString>
 #include <QtCharts>
 
+#include "MainWindow.h"
+
 class AnalysisWidgetPrivate;
 
-class AnalysisWidget : public QWidget
+class MYWINDOW_EXPORT AnalysisWidget : public QWidget
 {
     Q_OBJECT
     Q_DECLARE_PRIVATE(AnalysisWidget)

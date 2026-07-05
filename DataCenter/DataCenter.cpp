@@ -1,4 +1,5 @@
 ﻿#include "DataCenter.h"
+#include "RecordRepository.h"
 #include "DBHelper.h"
 
 #include <QCoreApplication>
@@ -6,11 +7,21 @@
 #include <QDebug>
 #include <QString>
 
+#include <cstdio>
+#include <string>
+#include <vector>
 
 class DataCenter::Impl
 {
 public:
     DBHelper helper;
+    std::unique_ptr<RecordRepository> repo;
+
+    void ensureRepo()
+    {
+        if (!repo)
+            repo = std::make_unique<RecordRepository>(helper);
+    }
 };
 
 DataCenter::DataCenter(QObject* parent)
@@ -25,127 +36,41 @@ DataCenter::~DataCenter()
 
 bool DataCenter::addRecord(const TradeRecord& record)
 {
-    std::string sql = R"(
-        INSERT INTO records (type, category, source, amount, date, remark, source_account, target_account)
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?);
-    )";
-
-    auto res = m_pImpl->helper.exec(sql, {
-        record.trade_type.toStdString(),
-        record.trade_category.toStdString(),
-        record.source.toStdString(),
-        std::to_string(record.amount),
-        record.trade_time.toStdString(),
-        record.remark.toStdString(),
-        record.from.toStdString(),
-        record.to.toStdString()
-    });
-
-    if (!res.success)
-    {
-        qDebug() << "鎻掑叆澶辫触: " << res.error;
-    }
-    return res.success;
+    m_pImpl->ensureRepo();
+    bool ok = m_pImpl->repo->insert(record);
+    if (!ok)
+        qDebug() << "插入失败";
+    return ok;
 }
 
 bool DataCenter::deleteRecord(int id)
 {
-    std::string sql = "DELETE FROM records WHERE id = ?;";
-    auto res = m_pImpl->helper.exec(sql, { std::to_string(id) });
-    if (!res.success)
-    {
-        qDebug() << "鍒犻櫎澶辫触: " << res.error;
-    }
-    return res.success;
+    m_pImpl->ensureRepo();
+    bool ok = m_pImpl->repo->remove(id);
+    if (!ok)
+        qDebug() << "删除失败";
+    return ok;
 }
 
 bool DataCenter::updateRecord(const TradeRecord& record)
 {
-    std::string sql = R"(
-        UPDATE records
-        SET
-            type = ?,
-            category = ?,
-            source = ?,
-            amount = ?,
-            date = ?,
-            remark = ?,
-            source_account = ?,
-            target_account = ?
-        WHERE id = ?;
-    )";
-
-    auto res = m_pImpl->helper.exec(sql, {
-        record.trade_type.toStdString(),
-        record.trade_category.toStdString(),
-        record.source.toStdString(),
-        std::to_string(record.amount),
-        record.trade_time.toStdString(),
-        record.remark.toStdString(),
-        record.from.toStdString(),
-        record.to.toStdString(),
-        record.id.toStdString()
-    });
-
-    if (!res.success)
-    {
-        qDebug() << "鏇存柊澶辫触: " << res.error;
-    }
-    return res.success;
+    m_pImpl->ensureRepo();
+    bool ok = m_pImpl->repo->update(record);
+    if (!ok)
+        qDebug() << "更新失败";
+    return ok;
 }
 
 QList<TradeRecord> DataCenter::getAllRecords()
 {
-    std::string sql = R"(
-        SELECT * FROM records ORDER BY date DESC;
-    )";
-    auto res = m_pImpl->helper.query(sql);
-    QList<TradeRecord> records;
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            TradeRecord record;
-            record.id = QString::fromStdString(row[0]);
-            record.trade_type = QString::fromStdString(row[1]);
-            record.trade_category = QString::fromStdString(row[2]);
-            record.source = QString::fromStdString(row[3]);
-            record.amount = std::stod(row[4]);
-            record.trade_time = QString::fromStdString(row[5]);
-            record.remark = QString::fromStdString(row[6]);
-            record.from = QString::fromStdString(row[7]);
-            record.to = QString::fromStdString(row[8]);
-            records.append(record);
-        }
-    }
-    return records;
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchAll();
 }
 
 TradeRecord DataCenter::getNewRecord()
 {
-    std::string sql = R"(
-        SELECT * FROM records
-        ORDER BY id DESC
-        LIMIT 1;
-    )";
-    auto res = m_pImpl->helper.query(sql);
-    TradeRecord record;
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            record.id = QString::fromStdString(row[0]);
-            record.trade_type = QString::fromStdString(row[1]);
-            record.trade_category = QString::fromStdString(row[2]);
-            record.source = QString::fromStdString(row[3]);
-            record.amount = std::stod(row[4]);
-            record.trade_time = QString::fromStdString(row[5]);
-            record.remark = QString::fromStdString(row[6]);
-            record.from = QString::fromStdString(row[7]);
-            record.to = QString::fromStdString(row[8]);
-        }
-    }
-    return record;
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchNewest();
 }
 
 void DataCenter::initTables(const QString& dbPath)
@@ -154,74 +79,47 @@ void DataCenter::initTables(const QString& dbPath)
         ? QCoreApplication::applicationDirPath() + "/config/account.db"
         : dbPath;
     m_pImpl->helper.open(path.toStdString());
-
-    auto res = m_pImpl->helper.exec(R"(
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT NOT NULL,
-            category TEXT NOT NULL,
-            source TEXT NOT NULL,
-            amount REAL NOT NULL,
-            date TEXT NOT NULL,
-            remark TEXT,
-            source_account TEXT,
-            target_account TEXT
-        );
-    )");
-    if (!res.success)
-    {
-        qDebug() << "鍒涘缓琛ㄥけ璐? " << QString::fromStdString(res.error);
-    }
+    m_pImpl->ensureRepo();
+    auto ok = m_pImpl->repo->initializeSchema();
+    if (!ok)
+        qDebug() << "创建表失败";
 }
 
 Statistics DataCenter::getStatistics(TimeRange range, int year, int month, int day)
 {
+    m_pImpl->ensureRepo();
     Statistics stats;
-    std::string sql = R"(
-        SELECT
-            COALESCE(SUM(CASE WHEN type = '鏀跺叆' THEN amount ELSE 0 END), 0) as income,
-            COALESCE(SUM(CASE WHEN type = '鏀嚭' THEN amount ELSE 0 END), 0) as expense
-        FROM records
-    )";
 
+    std::string whereClause;
     std::vector<std::string> params;
 
     switch (range) {
     case TimeRange::Total:
         break;
-
     case TimeRange::Year:
-        sql += " WHERE strftime('%Y', date) = ?";
+        whereClause = " WHERE strftime('%Y', date) = ?";
         params.push_back(std::to_string(year));
         break;
-
     case TimeRange::Month: {
         char monthStr[8];
         snprintf(monthStr, sizeof(monthStr), "%04d-%02d", year, month);
-        sql += " WHERE strftime('%Y-%m', date) = ?";
+        whereClause = " WHERE strftime('%Y-%m', date) = ?";
         params.push_back(std::string(monthStr));
         break;
     }
-
     case TimeRange::Day: {
         char dayStr[11];
         snprintf(dayStr, sizeof(dayStr), "%04d-%02d-%02d", year, month, day);
-        sql += " WHERE date = ?";
+        whereClause = " WHERE date = ?";
         params.push_back(std::string(dayStr));
         break;
     }
     }
 
-    DBHelper::QueryResult result = m_pImpl->helper.query(sql, params);
-
-    if (result.success && !result.data.empty()) {
-        const auto& row = result.data[0];
-        if (row.size() >= 2) {
-            stats.income = std::stod(row[0]);
-            stats.expense = std::stod(row[1]);
-            stats.profit = stats.income - stats.expense;
-        }
-    }
+    auto ie = m_pImpl->repo->fetchIncomeExpense(whereClause, params);
+    stats.income = ie.income;
+    stats.expense = ie.expense;
+    stats.profit = stats.income - stats.expense;
 
     return stats;
 }
@@ -248,135 +146,38 @@ Statistics DataCenter::getDayStats(int year, int month, int day)
 
 QMap<QString, double> DataCenter::getCategoryStats(const QDate& start, const QDate& end, const QString& type)
 {
-    QMap<QString, double> result;
-    std::string sql = R"(
-        SELECT category, SUM(amount) as total
-        FROM records
-        WHERE date >= ? AND date <= ?
-    )";
-
-    std::vector<std::string> params;
-    params.push_back(start.toString("yyyy-MM-dd").toStdString());
-    params.push_back(end.toString("yyyy-MM-dd").toStdString());
-
-    if (!type.isEmpty() && type != QStringLiteral("\u5168\u90e8"))
-    {
-        sql += " AND type = ?";
-        params.push_back(type.toStdString());
-    }
-    sql += " GROUP BY category ORDER BY total DESC";
-
-    auto res = m_pImpl->helper.query(sql, params);
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            if (row.size() >= 2)
-            {
-                result[QString::fromStdString(row[0])] = std::stod(row[1]);
-            }
-        }
-    }
-    return result;
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchCategoryStats(start, end, type);
 }
 
 QMap<QString, double> DataCenter::getDailyStats(const QDate& start, const QDate& end, const QString& type)
 {
-    QMap<QString, double> result;
-    std::string sql = R"(
-        SELECT date, SUM(amount) as total
-        FROM records
-        WHERE date >= ? AND date <= ?
-    )";
-
-    std::vector<std::string> params;
-    params.push_back(start.toString("yyyy-MM-dd").toStdString());
-    params.push_back(end.toString("yyyy-MM-dd").toStdString());
-
-    if (!type.isEmpty() && type != QStringLiteral("\u5168\u90e8"))
-    {
-        sql += " AND type = ?";
-        params.push_back(type.toStdString());
-    }
-    sql += " GROUP BY date ORDER BY date ASC";
-
-    auto res = m_pImpl->helper.query(sql, params);
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            if (row.size() >= 2)
-            {
-                result[QString::fromStdString(row[0])] = std::stod(row[1]);
-            }
-        }
-    }
-    return result;
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchDailyStats(start, end, type);
 }
 
 QList<TradeRecord> DataCenter::getRecordsByDate(const QDate& start, const QDate& end)
 {
-    std::string sql = R"(
-        SELECT * FROM records
-        WHERE date >= ? AND date <= ?
-        ORDER BY date DESC;
-    )";
-
-    std::vector<std::string> params;
-    params.push_back(start.toString("yyyy-MM-dd").toStdString());
-    params.push_back(end.toString("yyyy-MM-dd").toStdString());
-
-    auto res = m_pImpl->helper.query(sql, params);
-    QList<TradeRecord> records;
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            TradeRecord record;
-            record.id = QString::fromStdString(row[0]);
-            record.trade_type = QString::fromStdString(row[1]);
-            record.trade_category = QString::fromStdString(row[2]);
-            record.source = QString::fromStdString(row[3]);
-            record.amount = std::stod(row[4]);
-            record.trade_time = QString::fromStdString(row[5]);
-            record.remark = QString::fromStdString(row[6]);
-            record.from = QString::fromStdString(row[7]);
-            record.to = QString::fromStdString(row[8]);
-            records.append(record);
-        }
-    }
-    return records;
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchByDateRange(start, end);
 }
 
 QList<TradeRecord> DataCenter::searchRecords(const QString& keyword)
 {
-    std::string sql = R"(
-        SELECT * FROM records
-        WHERE remark LIKE ? OR CAST(amount AS TEXT) LIKE ?
-        ORDER BY date DESC;
-    )";
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->searchByKeyword(keyword);
+}
 
-    std::string pattern = "%" + keyword.toStdString() + "%";
-    auto res = m_pImpl->helper.query(sql, { pattern, pattern });
-    QList<TradeRecord> records;
-    if (res.success)
-    {
-        for (const auto& row : res.data)
-        {
-            TradeRecord record;
-            record.id = QString::fromStdString(row[0]);
-            record.trade_type = QString::fromStdString(row[1]);
-            record.trade_category = QString::fromStdString(row[2]);
-            record.source = QString::fromStdString(row[3]);
-            record.amount = std::stod(row[4]);
-            record.trade_time = QString::fromStdString(row[5]);
-            record.remark = QString::fromStdString(row[6]);
-            record.from = QString::fromStdString(row[7]);
-            record.to = QString::fromStdString(row[8]);
-            records.append(record);
-        }
-    }
-    return records;
+QList<TradeRecord> DataCenter::getRecords(int page, int pageSize)
+{
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->fetchPage(page, pageSize);
+}
+
+int DataCenter::getRecordCount()
+{
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->countAll();
 }
 
 double DataCenter::getIncome(TimeRange range, int year, int month, int day)
@@ -393,4 +194,3 @@ double DataCenter::getProfit(TimeRange range, int year, int month, int day)
 {
     return getStatistics(range, year, month, day).profit;
 }
-

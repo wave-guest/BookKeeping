@@ -60,6 +60,8 @@ public:
     bool updateRecord(const TradeRecord& record);     // 修改记录
     QList<TradeRecord> getAllRecords();               // 获取所有记录
     TradeRecord getNewRecord();                       // 获取最新记录
+    QList<TradeRecord> getRecords(int page, int pageSize = 20); // 分页查询
+    int getRecordCount();                             // 获取记录总数
 
 private:
     class Impl;

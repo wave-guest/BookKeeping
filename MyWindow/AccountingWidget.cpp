@@ -1,4 +1,5 @@
 #include "AccountingWidget.h"
+#include "PageController.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -60,6 +61,7 @@ public:
     QTableWidget* recordTable;    // 记录表格
     QPushButton* deleteBtn;       // 删除按钮
     QPushButton* editBtn;         // 修改按钮
+    PageController* pageCtrl;     // 分页控件
 
     // 标记是否为编辑模式
     bool isEditMode;
@@ -118,6 +120,10 @@ void AccountingWidgetPrivate::initLayout()
     btnLayout->addWidget(deleteBtn);
     btnLayout->addStretch();
     rightLayout->addWidget(btnBar);
+
+    // 分页控件
+    pageCtrl = new PageController(rightWidget);
+    rightLayout->addWidget(pageCtrl);
 
     mainLayout->addWidget(rightWidget, 1);
 }
@@ -340,9 +346,16 @@ AccountingWidget::AccountingWidget(QWidget* parent)
     connect(d->searchBtn, &QPushButton::clicked, this, &AccountingWidget::onSearchRecords);
     // 表格选中变化
     connect(d->recordTable, &QTableWidget::itemSelectionChanged, this, &AccountingWidget::onTableSelectionChanged);
+    // 分页控件
+    connect(d->pageCtrl, &PageController::pageChanged, this, [this](int page) { emit pageRequested(page); });
 }
 
 AccountingWidget::~AccountingWidget() = default;
+
+PageController* AccountingWidget::getPageController() const
+{
+    return d_ptr->pageCtrl;
+}
 
 void AccountingWidget::fillTable(const QList<TradeRecord>& list)
 {
