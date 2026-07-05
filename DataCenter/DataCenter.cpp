@@ -133,6 +133,18 @@ QMap<QString, double> DataCenter::getDailyStats(const QDate& start, const QDate&
     return m_pImpl->repo->fetchDailyStats(start, end, type);
 }
 
+QString DataCenter::getSetting(const QString& key)
+{
+    m_pImpl->ensureRepo();
+    return QString::fromStdString(m_pImpl->repo->getSetting(key.toStdString()));
+}
+
+bool DataCenter::setSetting(const QString& key, const QString& value)
+{
+    m_pImpl->ensureRepo();
+    return m_pImpl->repo->setSetting(key.toStdString(), value.toStdString());
+}
+
 QStringList DataCenter::getCategoryList(const QString& type)
 {
     m_pImpl->ensureRepo();

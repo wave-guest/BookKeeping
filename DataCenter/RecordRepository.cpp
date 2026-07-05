@@ -26,6 +26,14 @@ bool RecordRepository::initializeSchema()
             target_account TEXT
         );
     )");
+    if (!res.success) return false;
+
+    res = m_helper.exec(R"(
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        );
+    )");
     return res.success;
 }
 
@@ -227,6 +235,21 @@ QMap<QString, double> RecordRepository::fetchDailyStats(
         }
     }
     return result;
+}
+
+std::string RecordRepository::getSetting(const std::string& key)
+{
+    auto res = m_helper.query("SELECT value FROM settings WHERE key = ?", { key });
+    if (res.success && !res.data.empty() && !res.data[0].empty())
+        return res.data[0][0];
+    return {};
+}
+
+bool RecordRepository::setSetting(const std::string& key, const std::string& value)
+{
+    auto res = m_helper.exec(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", { key, value });
+    return res.success;
 }
 
 QStringList RecordRepository::fetchCategoryList(const QString& type)

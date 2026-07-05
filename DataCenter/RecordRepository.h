@@ -40,6 +40,10 @@ public:
     QMap<QString, double> fetchDailyStats(const QDate& start, const QDate& end,
                                            const QString& type);
 
+    // 设置项
+    std::string getSetting(const std::string& key);
+    bool setSetting(const std::string& key, const std::string& value);
+
     // 分类/账户列表
     QStringList fetchCategoryList(const QString& type);
     QStringList fetchAccountList(const QString& role);

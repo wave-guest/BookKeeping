@@ -12,6 +12,10 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QStackedWidget>
+#include <QLineEdit>
+#include <QFileDialog>
+#include <QFile>
+#include <QApplication>
 #include <QLocale>
 
 // Impl类
@@ -46,6 +50,12 @@ public:
     AccountingWidget* accountingWidget; // 记账管理界面
     QWidget* settingsWidget;       // 设置界面
     AnalysisWidget* analysisWidget; // 收支分析界面
+
+    // 设置页控件
+    QLineEdit* stylePathEdit;
+    QPushButton* browseBtn;
+    QPushButton* saveStyleBtn;
+    QPushButton* resetStyleBtn;
 
     // 收支卡片标签
     std::map<QString, QLabel*> incomeLabelMap;
@@ -164,13 +174,53 @@ void MainWidgetPrivate::initRightContent()
     // 2. 记账管理界面
     accountingWidget = new AccountingWidget(stackedContent);
 
-    // 3. 设置界面（示例）
+    // 3. 设置界面
     settingsWidget = new QWidget(stackedContent);
-    QVBoxLayout* settingsLayout = new QVBoxLayout(settingsWidget);
-    settingsLayout->setAlignment(Qt::AlignCenter);
-    QLabel* settingsLabel = new QLabel("系统设置界面（待实现）", settingsWidget);
-    settingsLabel->setStyleSheet("font-size: 18px; color: #7f8c8d;");
-    settingsLayout->addWidget(settingsLabel);
+    settingsWidget->setObjectName("settingsPage");
+    QVBoxLayout* settingsOuterLayout = new QVBoxLayout(settingsWidget);
+    settingsOuterLayout->setContentsMargins(20, 20, 20, 20);
+    settingsOuterLayout->setSpacing(15);
+
+    QLabel* settingsTitle = new QLabel(QStringLiteral("\u2699\ufe0f \u7cfb\u7edf\u8bbe\u7f6e"), settingsWidget);
+    settingsTitle->setStyleSheet("font-size: 22px; font-weight: bold; color: #2d3436;");
+    settingsOuterLayout->addWidget(settingsTitle);
+
+    QWidget* settingsForm = new QWidget(settingsWidget);
+    settingsForm->setObjectName("leftFormWidget");
+    QVBoxLayout* settingsFormLayout = new QVBoxLayout(settingsForm);
+    settingsFormLayout->setContentsMargins(20, 20, 20, 20);
+    settingsFormLayout->setSpacing(15);
+
+    QLabel* themeSection = new QLabel(QStringLiteral("\u6837\u5f0f\u4e3b\u9898\u914d\u7f6e"), settingsForm);
+    themeSection->setProperty("cardRole", "cardTitle");
+    settingsFormLayout->addWidget(themeSection);
+
+    QHBoxLayout* pathLayout = new QHBoxLayout;
+    pathLayout->setSpacing(8);
+    QLabel* pathLabel = new QLabel(QStringLiteral("\u6837\u5f0f\u8868\u8def\u5f84:"), settingsForm);
+    stylePathEdit = new QLineEdit(settingsForm);
+    stylePathEdit->setReadOnly(true);
+    stylePathEdit->setPlaceholderText(QStringLiteral("\u9ed8\u8ba4\u6837\u5f0f"));
+    browseBtn = new QPushButton(QStringLiteral("\u6d4f\u89c8..."), settingsForm);
+    browseBtn->setObjectName("browseBtn");
+    pathLayout->addWidget(pathLabel);
+    pathLayout->addWidget(stylePathEdit, 1);
+    pathLayout->addWidget(browseBtn);
+    settingsFormLayout->addLayout(pathLayout);
+
+    QHBoxLayout* btnLayout = new QHBoxLayout;
+    btnLayout->setSpacing(10);
+    saveStyleBtn = new QPushButton(QStringLiteral("\u4fdd\u5b58\u5e76\u5e94\u7528"), settingsForm);
+    saveStyleBtn->setObjectName("saveBtn");
+    resetStyleBtn = new QPushButton(QStringLiteral("\u6062\u590d\u9ed8\u8ba4"), settingsForm);
+    btnLayout->addWidget(saveStyleBtn);
+    btnLayout->addWidget(resetStyleBtn);
+    btnLayout->addStretch();
+    settingsFormLayout->addLayout(btnLayout);
+
+    settingsFormLayout->addStretch();
+    settingsOuterLayout->addWidget(settingsForm);
+    settingsOuterLayout->addStretch();
 
     // 4. 收支分析界面
     analysisWidget = new AnalysisWidget(stackedContent);
@@ -349,6 +399,50 @@ MainWidget::MainWidget(const QString& dbPath, QWidget* parent)
         auto list = d_ptr->dataCenter.getRecords(page, 20);
         d_ptr->accountingWidget->fillTable(list);
     });
+
+    // 设置页交互
+    {
+        connect(d->browseBtn, &QPushButton::clicked, this, [d]() {
+            QString path = QFileDialog::getOpenFileName(d->q_ptr,
+                QStringLiteral("\u9009\u62e9\u6837\u5f0f\u8868"), QString(),
+                QStringLiteral("CSS \u6587\u4ef6 (*.css)"));
+            if (!path.isEmpty())
+                d->stylePathEdit->setText(path);
+        });
+
+        connect(d->saveStyleBtn, &QPushButton::clicked, this, [this, d]() {
+            QString path = d->stylePathEdit->text();
+            if (path.isEmpty()) return;
+            d_ptr->dataCenter.setSetting("style_path", path);
+            QFile f(path);
+            if (f.open(QFile::ReadOnly | QFile::Text)) {
+                qApp->setStyleSheet(QString::fromUtf8(f.readAll()));
+                f.close();
+            }
+        });
+
+        connect(d->resetStyleBtn, &QPushButton::clicked, this, [this, d]() {
+            d_ptr->dataCenter.setSetting("style_path", QString());
+            d->stylePathEdit->clear();
+            QString defaultPath = QCoreApplication::applicationDirPath() + "/config/style.css";
+            QFile f(defaultPath);
+            if (f.open(QFile::ReadOnly | QFile::Text)) {
+                qApp->setStyleSheet(QString::fromUtf8(f.readAll()));
+                f.close();
+            }
+        });
+
+        // 启动时从 DB 加载自定义样式
+        QString savedPath = d_ptr->dataCenter.getSetting("style_path");
+        if (!savedPath.isEmpty()) {
+            d->stylePathEdit->setText(savedPath);
+            QFile f(savedPath);
+            if (f.open(QFile::ReadOnly | QFile::Text)) {
+                qApp->setStyleSheet(QString::fromUtf8(f.readAll()));
+                f.close();
+            }
+        }
+    }
 
     auto list = d_ptr->dataCenter.getAllRecords();
     d->accountingWidget->fillTable(list);

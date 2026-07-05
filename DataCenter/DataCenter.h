@@ -51,6 +51,10 @@ public:
     // 每日趋势（折线图用）：type=""表示全部
     QMap<QString, double> getDailyStats(const QDate& start, const QDate& end, const QString& type = QString());
 
+    // --------------- 设置项接口 ---------------
+    QString getSetting(const QString& key);
+    bool setSetting(const QString& key, const QString& value);
+
     // --------------- 分类/账户接口 ---------------
     QStringList getCategoryList(const QString& type);
     QStringList getAccountList(const QString& role);
