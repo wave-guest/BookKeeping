@@ -15,6 +15,7 @@
 #include <QLineEdit>
 #include <QFileDialog>
 #include <QFile>
+#include <QMessageBox>
 #include <QApplication>
 #include <QLocale>
 
@@ -412,12 +413,18 @@ MainWidget::MainWidget(const QString& dbPath, QWidget* parent)
 
         connect(d->saveStyleBtn, &QPushButton::clicked, this, [this, d]() {
             QString path = d->stylePathEdit->text();
-            if (path.isEmpty()) return;
+            if (path.isEmpty()) {
+                QMessageBox::warning(d->q_ptr, QStringLiteral("\u4fdd\u5b58\u5931\u8d25"), QStringLiteral("\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a CSS \u6587\u4ef6"), QMessageBox::Ok);
+                return;
+            }
             d_ptr->dataCenter.setSetting("style_path", path);
             QFile f(path);
             if (f.open(QFile::ReadOnly | QFile::Text)) {
                 qApp->setStyleSheet(QString::fromUtf8(f.readAll()));
                 f.close();
+                QMessageBox::information(d->q_ptr, QStringLiteral("\u4fdd\u5b58\u6210\u529f"), QStringLiteral("\u6837\u5f0f\u8868\u5df2\u5e94\u7528"), QMessageBox::Ok);
+            } else {
+                QMessageBox::warning(d->q_ptr, QStringLiteral("\u4fdd\u5b58\u5931\u8d25"), QStringLiteral("\u65e0\u6cd5\u8bfb\u53d6\u6587\u4ef6: ") + path, QMessageBox::Ok);
             }
         });
 
@@ -429,6 +436,9 @@ MainWidget::MainWidget(const QString& dbPath, QWidget* parent)
             if (f.open(QFile::ReadOnly | QFile::Text)) {
                 qApp->setStyleSheet(QString::fromUtf8(f.readAll()));
                 f.close();
+                QMessageBox::information(d->q_ptr, QStringLiteral("\u6062\u590d\u6210\u529f"), QStringLiteral("\u5df2\u6062\u590d\u9ed8\u8ba4\u6837\u5f0f"), QMessageBox::Ok);
+            } else {
+                QMessageBox::warning(d->q_ptr, QStringLiteral("\u6062\u590d\u5931\u8d25"), QStringLiteral("\u65e0\u6cd5\u8bfb\u53d6\u9ed8\u8ba4\u6837\u5f0f\u6587\u4ef6"), QMessageBox::Ok);
             }
         });
 
