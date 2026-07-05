@@ -211,7 +211,7 @@ UI组件 emit signal → MainWindow Lambda槽 → DataCenter方法 → DBHelper.
 ```
 UI组件**不持有**DataCenter引用，全经过MainWindow协调。
 
-### Known Issues
+### Known Issues (已修复)
 1. ~~**DataCenter.cpp 函数重复**~~ → **已修复 (Step 0)**
 2. ~~**AnalysisWidget::dataRequested 信号无人连接**~~ → **已修复 (Step 1)**
 3. ~~**筛选/搜索** UI层是存根（仅弹框），DataCenter层已有完整实现未连通~~ → **已修复 (Step 2)**
@@ -219,6 +219,21 @@ UI组件**不持有**DataCenter引用，全经过MainWindow协调。
 5. ~~**PageController** 编译但无人使用~~ → **已修复 (Step 5)**
 6. ~~**DBHelper** 伪异步（线程+queue+mutex+cv+future.get阻塞）~~ → **已修复 (Step 4)**
 7. ~~**WINDOWS_EXPORT_ALL_SYMBOLS** 导出所有DLL符号~~ → **已修复 (Step 7)**
+
+### 安全与硬编码问题（Phase 6）
+
+| 优先级 | ID | 问题 | 位置 | 影响 |
+|--------|----|------|------|------|
+| **P0** | S1 | `initTables()` 空路径回退到`{exeDir}/config/account.db` | `DataCenter.cpp:79` | 测试空路径误写入生产库 |
+| **P0** | S2 | `DataCenter` 包含`<QCoreApplication>`调用`applicationDirPath()` | `DataCenter.cpp:5,79` | 违反层分离，数据库路径应与Qt运行时解耦 |
+| **P1** | H1 | 收支分类/来源/去向账户硬编码于 UI 层 × 7 列表 | `AccountingWidget.cpp:188-191` | 无法配置，改分类需重新编译 |
+| **P1** | H2 | 分析页分类列表与记账页不一致 | `AnalysisWidget.cpp:61` | 6项 vs 实际15+项 |
+| **P1** | H3 | 5 处 `SELECT *` + `row[0]`-`row[8]` 硬编码列索引 | `RecordRepository.cpp` | 改表结构即崩 |
+| **P2** | A1 | `fetchIncomeExpense` 拼接 `whereClause` SQL片段 | `RecordRepository.cpp:130` | API接口危险，传入外部数据可注入 |
+| **P2** | A2 | LIKE 搜索未转义 `%` `_` 通配符 | `RecordRepository.cpp:231` | 搜索特殊字符结果不精确 |
+| **P2** | A3 | `std::stoi/stod` 无异常保护 | `RecordRepository.cpp:115,243` | 数据异常直接崩溃 |
+| **P2** | A4 | 卡片 map 键使用 Unicode 表情字符串 | `MainWindow.cpp:387-405` | 改卡片标题即崩 |
+| **P2** | A5 | 3个 UI 头文件循环包含 `MainWindow.h` 仅取宏 | `PageController.h:6`, `AccountingWidget.h:8`, `AnalysisWidget.h:10` | 改 MainWindow.h 触发全量重编 |
 
 ## Execution Checklist
 
@@ -232,6 +247,10 @@ flowchart TD
     F --> G["Step 6: 引入 Repository 层"]
     G --> H["Step 7: CMake 配置清理"]
     H --> I["Step 8: 支付宝 CSV 导入"]
+    I --> J["Step 13: DataCenter 安全加固"]
+    J --> K["Step 14: SQL 安全加固"]
+    K --> L["Step 15: UI 层去硬编码"]
+    L --> M["Step 16: 抽取 Export.h"]
 ```
 
 ### Step 0: 修复 DataCenter.cpp 函数重复定义（阻塞项）
@@ -309,6 +328,43 @@ flowchart TD
 | 12.5 | 分析页筛选栏改两行 | `MyWindow/AnalysisWidget.cpp` | 拆分筛选控件为两行：第一行类型+分类+图表类型，第二行日期+刷新 |
 | 12.6 | 分页控件移除内联样式 | `MyWindow/PageController.cpp` | 删除 PageController 中的内联样式，由 CSS 统一接管 |
 
+### Step 13: DataCenter 安全加固（P0-S1, P0-S2）
+
+| # | 操作 | 文件 | 说明 |
+|---|------|------|------|
+| 13.1 | `initTables()` 空路径时返回 false + `qWarning` | `DataCenter/DataCenter.cpp` | 空路径不再回退到生产库 |
+| 13.2 | 移除 `<QCoreApplication>` 和 `applicationDirPath()`，dbPath 由构造参数传入 | `DataCenter/DataCenter.cpp` | 层分离修复 |
+| 13.3 | `DataCenter` 构造签名改为 `DataCenter(const QString& dbPath)` | `DataCenter/DataCenter.h/.cpp` | 不再内部计算路径 |
+| 13.4 | `MainWindow` 创建 `DataCenter` 时传入完整路径 | `MyWindow/MainWindow.cpp` | 调用侧适配 |
+| 13.5 | 测试用例 `initTables(tempPath)` 不受影响 | `Tests/test_datacenter.cpp` | 验证通过 |
+
+### Step 14: SQL 安全加固（P1-H3, P2-A1, P2-A2, P2-A3）
+
+| # | 操作 | 文件 | 说明 |
+|---|------|------|------|
+| 14.1 | 所有 `SELECT *` 改为显式列名 `SELECT id,type,category,source,amount,date,remark,source_account,target_account` | `DataCenter/RecordRepository.cpp:87,94,105,209,226` | 改表结构不崩 |
+| 14.2 | `fetchIncomeExpense` 参数从 `whereClause` 改为 `TimeRange` 枚举 | `DataCenter/RecordRepository.cpp:119-139` | 消除 SQL 片段拼接 API |
+| 14.3 | LIKE 搜索使用自定义转义字符 `ESCAPE '/'` 并转义 `%` `_` | `DataCenter/RecordRepository.cpp:231` | 通配符搜索精确 |
+| 14.4 | `std::stoi/stod` 加 `try-catch`，失败返回 0 | `DataCenter/RecordRepository.cpp:115,243` | 数据异常不崩溃 |
+
+### Step 15: UI 层配置去硬编码（P1-H1, P1-H2, P2-A4）
+
+| # | 操作 | 文件 | 说明 |
+|---|------|------|------|
+| 15.1 | 新增 `getCategoryList(type)` 接口从数据库读取分类 | `DataCenter/DataCenter.h/.cpp` | 中心化分类管理 |
+| 15.2 | 新增 `getAccountList(role)` 接口读取账户列表 | `DataCenter/DataCenter.h/.cpp` | 同上 |
+| 15.3 | `AccountingWidget` 动态加载分类/账户到 comboBox | `MyWindow/AccountingWidget.cpp:188-191` | 替换硬编码列表 |
+| 15.4 | `AnalysisWidget` 动态加载分类列表 | `MyWindow/AnalysisWidget.cpp:61` | 与记账页一致 |
+| 15.5 | 卡片 `map` 键改为英文标识（`total/year/month/day`），map名改为 `label_role` | `MyWindow/MainWindow.cpp:203-231,387-405` | 标题可配置不崩 |
+
+### Step 16: 抽取 Export.h（P2-A5）
+
+| # | 操作 | 文件 | 说明 |
+|---|------|------|------|
+| 16.1 | 新建 `MyWindow/Export.h` 定义 `MYWINDOW_EXPORT` | `MyWindow/Export.h` | 独立宏定义 |
+| 16.2 | 3 个 UI 头文件 `#include "Export.h"` 代替 `#include "MainWindow.h"` | `PageController.h:6`, `AccountingWidget.h:8`, `AnalysisWidget.h:10` | 打破循环依赖 |
+| 16.3 | `MainWindow.h` 也改为 `#include "Export.h"` | `MyWindow/MainWindow.h` | 一致性 |
+
 ### Step 9: 修复编辑后不刷新收支卡片（Bug）
 
 - **问题**: `MainWindow.cpp:357-361` 中 `updateRecord` lambda 未调用 `updateBalanceCards()` 和 `setTotalPage()`
@@ -375,3 +431,7 @@ P0-P8 全部已修复。
 | 4 (Step 10) | Fix: AnalysisWidget category combo not connected | DONE |
 | 4 (Step 11) | Remove dead code (enums, signals, commented code) | DONE |
 | 5 (Step 12) | UI 美化：CSS 主题 + 布局优化 | DONE |
+| 6 (Step 13) | DataCenter 安全加固（P0-S1, P0-S2） | PENDING |
+| 6 (Step 14) | SQL 安全加固（P1-H3, P2-A1/A2/A3） | PENDING |
+| 6 (Step 15) | UI 层配置去硬编码（P1-H1/H2, P2-A4） | PENDING |
+| 6 (Step 16) | 抽取 Export.h（P2-A5） | PENDING |
