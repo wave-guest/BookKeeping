@@ -82,27 +82,26 @@ void AccountingWidgetPrivate::initLayout()
     initLeftForm();
     QScrollArea* leftScrollArea = new QScrollArea(q_ptr);
     leftScrollArea->setWidgetResizable(true);
-    leftScrollArea->setWidget(leftFormWidget); // 把表单根Widget放到滚动区
-    leftScrollArea->setMinimumWidth(450);
-    leftScrollArea->setMaximumWidth(450);
+    leftScrollArea->setWidget(leftFormWidget);
+    leftScrollArea->setMinimumWidth(360);
+    leftScrollArea->setMaximumWidth(360);
     mainLayout->addWidget(leftScrollArea);
 
     // 右侧查询栏（占满剩余空间）
     initRightQuery();
     QWidget* rightWidget = new QWidget(q_ptr);
+    rightWidget->setObjectName("accountingPage");
     QVBoxLayout* rightLayout = new QVBoxLayout(rightWidget);
-    rightLayout->setSpacing(15);
+    rightLayout->setSpacing(12);
 
-    // 筛选搜索行
+    // 搜索筛选行
     QWidget* searchBar = new QWidget(rightWidget);
     QHBoxLayout* searchLayout = new QHBoxLayout(searchBar);
     searchLayout->setContentsMargins(0, 0, 0, 0);
-    searchLayout->addWidget(new QLabel("搜索："));
+    searchLayout->setSpacing(8);
     searchLayout->addWidget(searchEdit);
-    searchLayout->addSpacing(10);
-    searchLayout->addWidget(new QLabel("日期筛选："));
     searchLayout->addWidget(startDateEdit);
-    searchLayout->addWidget(new QLabel("至"));
+    searchLayout->addWidget(new QLabel("\u81f3"));
     searchLayout->addWidget(endDateEdit);
     searchLayout->addWidget(filterBtn);
     searchLayout->addWidget(searchBtn);
@@ -110,6 +109,7 @@ void AccountingWidgetPrivate::initLayout()
     rightLayout->addWidget(searchBar);
 
     // 记录表格
+    recordTable->setObjectName("recordTable");
     rightLayout->addWidget(recordTable, 1);
 
     // 操作按钮行
@@ -133,13 +133,14 @@ void AccountingWidgetPrivate::initLeftForm()
 {
     // 表单容器（包含标题+所有控件）
     leftFormWidget = new QWidget(q_ptr);
+    leftFormWidget->setObjectName("leftFormWidget");
     QVBoxLayout* leftFormLayout = new QVBoxLayout(leftFormWidget);
     leftFormLayout->setContentsMargins(10, 10, 10, 10);
     leftFormLayout->setSpacing(15);
 
     // 表单标题
     formTitleLabel = new QLabel("添加记账记录", leftFormWidget);
-    formTitleLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #2c3e50;");
+    formTitleLabel->setObjectName("formTitle");
     leftFormLayout->addWidget(formTitleLabel);
 
     // ========== 修复：收支类型单选按钮（之前遗漏的部分） ==========
@@ -214,20 +215,7 @@ void AccountingWidgetPrivate::initLeftForm()
 
     // 保存按钮
     saveBtn = new QPushButton("添加记录", leftFormWidget);
-    saveBtn->setStyleSheet(R"(
-        QPushButton {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        QPushButton:hover {
-            background-color: #219653;
-        }
-    )");
+    saveBtn->setObjectName("saveBtn");
     leftFormLayout->addWidget(saveBtn);
 
     // 切换分类的信号
@@ -273,7 +261,9 @@ void AccountingWidgetPrivate::initRightQuery()
 
     // 筛选/搜索按钮
     filterBtn = new QPushButton("筛选", q_ptr);
+    filterBtn->setObjectName("filterBtn");
     searchBtn = new QPushButton("搜索", q_ptr);
+    searchBtn->setObjectName("searchBtn");
 
     // 记录表格
     recordTable = new QTableWidget(q_ptr);
@@ -287,41 +277,11 @@ void AccountingWidgetPrivate::initRightQuery()
 
     // 删除/修改按钮
     deleteBtn = new QPushButton("删除选中", q_ptr);
-    deleteBtn->setStyleSheet(R"(
-        QPushButton {
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 15px;
-        }
-        QPushButton:hover {
-            background-color: #c0392b;
-        }
-        QPushButton:disabled {
-            background-color: #95a5a6;
-            color: #ecf0f1;
-        }
-    )");
+    deleteBtn->setObjectName("deleteBtn");
     deleteBtn->setDisabled(true);
 
     editBtn = new QPushButton("修改选中", q_ptr);
-    editBtn->setStyleSheet(R"(
-        QPushButton {
-            background-color: #f39c12;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 8px 15px;
-        }
-        QPushButton:hover {
-            background-color: #e67e22;
-        }
-        QPushButton:disabled {
-            background-color: #95a5a6;
-            color: #ecf0f1;
-        }
-    )");
+    editBtn->setObjectName("editBtn");
     editBtn->setDisabled(true);
 }
 

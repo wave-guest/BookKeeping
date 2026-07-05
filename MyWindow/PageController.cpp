@@ -31,6 +31,7 @@ PageController::PageController(QWidget* parent)
     : QWidget(parent)
 {
     m_pImpl = std::make_unique<Impl>();
+    setObjectName("pageController");
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -39,6 +40,7 @@ PageController::PageController(QWidget* parent)
     m_pImpl->firstBtn = new QPushButton(QStringLiteral("\u9996\u9875"), this);
     m_pImpl->prevBtn = new QPushButton(QStringLiteral("\u4e0a\u4e00\u9875"), this);
     m_pImpl->pageLabel = new QLabel(QStringLiteral("\u7b2c 1/1 \u9875"), this);
+    m_pImpl->pageLabel->setObjectName("pageLabel");
     m_pImpl->nextBtn = new QPushButton(QStringLiteral("\u4e0b\u4e00\u9875"), this);
     m_pImpl->lastBtn = new QPushButton(QStringLiteral("\u672b\u9875"), this);
 

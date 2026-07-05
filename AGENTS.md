@@ -294,6 +294,21 @@ flowchart TD
 
 ### Step 8: 支付宝 CSV 导入 (搁置)
 
+### Step 12: UI 美化：CSS 主题 + 布局优化
+
+- **样式文件**: `E:\code\sdk\config\style.css`（新建）
+- **主题风格**: 深色导航栏（`#1e272e`）+ 浅色内容区（`#f1f2f6`），强调色 `#0fbcf9`（亮蓝）
+- **布局调整**:
+
+| # | 操作 | 文件 | 说明 |
+|---|------|------|------|
+| 12.1 | 新建 `style.css` | `E:\code\sdk\config\style.css` | 全部 CSS 样式（全局/导航/卡片/表格/按钮/表单），对象名称选择器 |
+| 12.2 | 加载 CSS | `MainApp/main.cpp` | `QFile` 读取 `E:\code\sdk\config\style.css` 后 `app.setStyleSheet()` |
+| 12.3 | 导航栏布局调整 | `MyWindow/MainWindow.cpp` | 宽度 200→180px，按钮前加 Unicode 图标，首页卡片横向 1×4 排列，底部加版本号标签 |
+| 12.4 | 记账页表单缩窄 | `MyWindow/AccountingWidget.cpp` | 表单区 450→360px，搜索筛选行合并简化，表格设置 objectName |
+| 12.5 | 分析页筛选栏改两行 | `MyWindow/AnalysisWidget.cpp` | 拆分筛选控件为两行：第一行类型+分类+图表类型，第二行日期+刷新 |
+| 12.6 | 分页控件移除内联样式 | `MyWindow/PageController.cpp` | 删除 PageController 中的内联样式，由 CSS 统一接管 |
+
 ### Step 9: 修复编辑后不刷新收支卡片（Bug）
 
 - **问题**: `MainWindow.cpp:357-361` 中 `updateRecord` lambda 未调用 `updateBalanceCards()` 和 `setTotalPage()`
@@ -316,12 +331,31 @@ flowchart TD
 | 11.4 | 删除 `PageController` 的 `onFirstPage/onPrevPage/onNextPage/onLastPage` 信号 | `PageController.h/.cpp` | 只 `emit` 无人 `connect` |
 | 11.5 | 删除 `TradeRecord::info()` 注释代码 | `TradeRecord.h:21-30` | 整个方法体注释 |
 
+### 已知 Bug（待修复）
+
+| 优先级 | Bug | 位置 | 影响 | 工作量 |
+|--------|-----|------|------|--------|
+| **P0** | 导航按钮 checked 状态不同步 | `MainWindow.cpp:352-369` | 切换页面后多个按钮同时高亮 | 4 行 |
+| **P1** | 表单容器无 objectName，CSS 白底圆角不生效 | `AccountingWidget.cpp:135` | 表单区透明背景 | 1 行 |
+| **P2** | 分析页无 objectName，CSS 选择器不命中 | `AnalysisWidget.cpp:112-119` | 背景由父控件兜底无直接影响 | 1 行 |
+| **P3** | 6 个按钮/标签无 objectName，CSS 死代码 | `AccountingWidget.cpp` | 靠内联样式维持 | 每处 1 行 |
+| **P4** | 3 个无用 include | `MainWindow.cpp:14,16,17` | 无影响 | 删 3 行 |
+| **P5** | 按钮颜色太浅，hover 变化不明显 | `style.css` | 用户看不清按钮状态变化 | 调深启用色，加大 hover 对比度 |
+| **P6** | 表单标签 `QLabel[inputLabel="true"]` CSS 死代码 | `style.css` + `AccountingWidget.cpp` | 标签无样式，CSS 不生效 | 改为 `#leftFormWidget QLabel` 选择器 |
+| **P7** | 表格选中行无样式 | `style.css` | 选中行视觉反馈弱 | 添加 `QTableWidget::item:selected` |
+| **P8** | 分页按钮禁用态 hover 样式冲突 | `style.css` | 禁用时 hover 仍有背景色变化 | 简化分页按钮样式 |
+
+### 已修复
+
+P0-P8 全部已修复。
+- **CSS 类选择器**: `.cardTitle` 等 7 个类选择器改为 `QLabel[cardRole="..."]` 属性选择器 + `setProperty("cardRole", ...)`，卡片标签样式恢复正常
+
 ### 验证方式
 
 | 范围 | 命令 |
 |------|------|
-| Step 0-7 | `cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo` + `cmake --build build --config RelWithDebInfo` + `& E:\code\sdk\DataCenterTest.exe` |
-| Step 9-11 | 同上 + 启动 BKPro.exe 手动验证 UX |
+| Step 0-11 | `cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo` + `cmake --build build --config RelWithDebInfo` + `& E:\code\sdk\DataCenterTest.exe` |
+| Step 12 | 同上 + 启动 BKPro.exe 检查视觉效果 |
 
 ## Refactoring Progress
 
@@ -340,3 +374,4 @@ flowchart TD
 | 4 (Step 9) | Fix: update record does not refresh balance cards | DONE |
 | 4 (Step 10) | Fix: AnalysisWidget category combo not connected | DONE |
 | 4 (Step 11) | Remove dead code (enums, signals, commented code) | DONE |
+| 5 (Step 12) | UI 美化：CSS 主题 + 布局优化 | DONE |

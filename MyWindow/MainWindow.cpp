@@ -11,10 +11,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QFrame>
 #include <QStackedWidget>
-#include <QMessageBox>
-#include <QSizePolicy>
 #include <QLocale>
 
 // Impl类
@@ -32,8 +29,7 @@ public:
     // 创建收支汇总卡片
     QWidget* createSummaryCard(const QString& title,
         const QString& incomeText,
-        const QString& expenseText,
-        const QString& cardColor);
+        const QString& expenseText);
 
     // 控件声明
     // 左侧导航
@@ -71,11 +67,11 @@ void MainWidgetPrivate::initLayout()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // 左侧导航栏（固定宽度200）
+    // 左侧导航栏（固定宽度180）
     initLeftNav();
-    leftNavWidget->setMinimumWidth(200);
-    leftNavWidget->setMaximumWidth(200);
-    leftNavWidget->setStyleSheet("background-color: #2c3e50;");
+    leftNavWidget->setObjectName("leftNavWidget");
+    leftNavWidget->setMinimumWidth(180);
+    leftNavWidget->setMaximumWidth(180);
     mainLayout->addWidget(leftNavWidget);
 
     // 右侧内容区（占满剩余空间）
@@ -87,124 +83,81 @@ void MainWidgetPrivate::initLayout()
 void MainWidgetPrivate::initLeftNav()
 {
     leftNavWidget = new QWidget(q_ptr);
+    leftNavWidget->setObjectName("leftNavWidget");
     QVBoxLayout* navLayout = new QVBoxLayout(leftNavWidget);
     navLayout->setContentsMargins(10, 30, 10, 10);
-    navLayout->setSpacing(15);
+    navLayout->setSpacing(8);
 
     // 导航标题
-    QLabel* titleLabel = new QLabel("记账系统", leftNavWidget);
-    titleLabel->setStyleSheet("color: white; font-size: 18px; font-weight: bold;");
+    QLabel* titleLabel = new QLabel(QStringLiteral("\U0001f4b0 \u8bb0\u8d26\u7cfb\u7edf"), leftNavWidget);
+    titleLabel->setObjectName("navTitle");
     titleLabel->setAlignment(Qt::AlignCenter);
     navLayout->addWidget(titleLabel);
-    navLayout->addSpacing(20);
-    // 新增：返回主界面按钮（默认选中）
-    homeBtn = new QPushButton("主界面", leftNavWidget);
-    homeBtn->setStyleSheet(R"(
-        QPushButton {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 12px;
-            font-size: 14px;
-            text-align: left;
-            padding-left: 20px;
-        }
-        QPushButton:hover {
-            background-color: #2980b9;
-        }
-        QPushButton:pressed {
-            background-color: #1f618d;
-        }
-    )");
-    homeBtn->setMinimumHeight(40);
-    navLayout->addWidget(homeBtn);
+    navLayout->addSpacing(10);
 
-    // 记账管理按钮
-    accountingBtn = new QPushButton("记账管理", leftNavWidget);
-    accountingBtn->setStyleSheet(R"(
-        QPushButton {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 12px;
-            font-size: 14px;
-            text-align: left;
-            padding-left: 20px;
-        }
-        QPushButton:hover {
-            background-color: #2980b9;
-        }
-        QPushButton:pressed {
-            background-color: #1f618d;
-        }
-    )");
-    accountingBtn->setMinimumHeight(40);
-    navLayout->addWidget(accountingBtn);
+    // 导航按钮
+    auto createNavBtn = [&](const QString& objName, const QString& text) -> QPushButton* {
+        QPushButton* btn = new QPushButton(text, leftNavWidget);
+        btn->setObjectName(objName);
+        btn->setCheckable(true);
+        btn->setMinimumHeight(40);
+        navLayout->addWidget(btn);
+        return btn;
+    };
 
-    // 收支分析按钮
-    analysisBtn = new QPushButton("收支分析", leftNavWidget);
-    analysisBtn->setStyleSheet(accountingBtn->styleSheet()); // 用之前定义的默认样式
-    analysisBtn->setMinimumHeight(40);
-    navLayout->addWidget(analysisBtn);
+    homeBtn = createNavBtn("homeBtn", QStringLiteral("\U0001f3e0 \u4e3b\u754c\u9762"));
+    accountingBtn = createNavBtn("accountingBtn", QStringLiteral("\U0001f4cb \u8bb0\u8d26\u7ba1\u7406"));
+    analysisBtn = createNavBtn("analysisBtn", QStringLiteral("\U0001f4ca \u6536\u652f\u5206\u6790"));
+    settingsBtn = createNavBtn("settingsBtn", QStringLiteral("\u2699\ufe0f \u7cfb\u7edf\u8bbe\u7f6e"));
 
-    // 系统设置按钮
-    settingsBtn = new QPushButton("系统设置", leftNavWidget);
-    settingsBtn->setStyleSheet(accountingBtn->styleSheet());
-    settingsBtn->setMinimumHeight(40);
-    navLayout->addWidget(settingsBtn);
+    homeBtn->setChecked(true);
 
-    // 底部拉伸
+    // 底部版本号
     navLayout->addStretch();
-
+    QLabel* versionLabel = new QLabel("v1.0", leftNavWidget);
+    versionLabel->setObjectName("versionLabel");
+    versionLabel->setAlignment(Qt::AlignCenter);
+    navLayout->addWidget(versionLabel);
 }
 
 // 初始化右侧内容区
 void MainWidgetPrivate::initRightContent()
 {
     stackedContent = new QStackedWidget(q_ptr);
-    stackedContent->setStyleSheet("background-color: #ecf0f1;");
 
     // 1. 首页（收支卡片）
     homeWidget = new QWidget(stackedContent);
+    homeWidget->setObjectName("homeWidget");
     QVBoxLayout* homeLayout = new QVBoxLayout(homeWidget);
     homeLayout->setContentsMargins(20, 20, 20, 20);
-    homeLayout->setSpacing(15);
+    homeLayout->setSpacing(20);
 
     // 页面标题
-    QLabel* pageTitle = new QLabel("收支汇总", homeWidget);
-    pageTitle->setStyleSheet("font-size: 22px; font-weight: bold; color: #2c3e50;");
+    QLabel* pageTitle = new QLabel(QStringLiteral("\U0001f4ca \u6536\u652f\u6c47\u603b"), homeWidget);
+    pageTitle->setStyleSheet("font-size: 22px; font-weight: bold; color: #2d3436;");
     homeLayout->addWidget(pageTitle);
 
-    // 总收支卡片
-    QVBoxLayout* leftLayout = new QVBoxLayout;
-    leftLayout->setContentsMargins(0, 0, 0, 0);
-    QWidget* totalCard = createSummaryCard("总收支", "¥0.00", "¥0.00", "#3498db");
-    leftLayout->addWidget(totalCard);
-
-    // 年收支卡片
-    QWidget* yearCard = createSummaryCard("年收支", "¥0.00", "¥0.00", "#9b59b6");
-    leftLayout->addWidget(yearCard);
-
-    QVBoxLayout* rightLayout = new QVBoxLayout;
-    rightLayout->setContentsMargins(0, 0, 0, 0);
-    // 月收支卡片
-    QWidget* monthCard = createSummaryCard("月收支", "¥0.00", "¥0.00", "#1abc9c");
-    rightLayout->addWidget(monthCard);
-
-    // 今日收支卡片
-    QWidget* todayCard = createSummaryCard("今日收支", "¥0.00", "¥0.00", "#2ecc71");
-    rightLayout->addWidget(todayCard);
-
+    // 4 张卡片横向排列
     QHBoxLayout* cardLayout = new QHBoxLayout;
-    cardLayout->addLayout(leftLayout);
-    cardLayout->addLayout(rightLayout);
     cardLayout->setContentsMargins(0, 0, 0, 0);
+    cardLayout->setSpacing(15);
+
+    QStringList cardNames = { "cardTotal", "cardYear", "cardMonth", "cardDay" };
+    QStringList cardTitles = {
+        QStringLiteral("\U0001f310 \u603b\u6536\u652f"),
+        QStringLiteral("\U0001f4c5 \u5e74\u6536\u652f"),
+        QStringLiteral("\U0001f4c6 \u6708\u6536\u652f"),
+        QStringLiteral("\U0001f31e \u4eca\u65e5\u6536\u652f")
+    };
+
+    for (int i = 0; i < cardNames.size(); ++i)
+    {
+        QWidget* card = createSummaryCard(cardTitles[i], QStringLiteral("\u00a50.00"), QStringLiteral("\u00a50.00"));
+        card->setObjectName(cardNames[i]);
+        cardLayout->addWidget(card);
+    }
 
     homeLayout->addLayout(cardLayout);
-
-    // 底部拉伸
     homeLayout->addStretch();
 
     // 2. 记账管理界面
@@ -234,77 +187,49 @@ void MainWidgetPrivate::initRightContent()
 // 创建收支汇总卡片
 QWidget* MainWidgetPrivate::createSummaryCard(const QString& title,
     const QString& incomeText,
-    const QString& expenseText,
-    const QString& cardColor)
+    const QString& expenseText)
 {
     QWidget* card = new QWidget(q_ptr);
-    card->setStyleSheet(QString(R"(
-        QWidget {
-            background-color: %1;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        QLabel {
-            color: white;
-        }
-    )").arg(cardColor));
-    card->setMinimumHeight(150);
+    card->setMinimumHeight(140);
 
     QVBoxLayout* cardLayout = new QVBoxLayout(card);
-    cardLayout->setContentsMargins(10, 10, 10, 10);
-    cardLayout->setSpacing(15);
+    cardLayout->setContentsMargins(15, 12, 15, 12);
+    cardLayout->setSpacing(8);
 
     // 卡片标题
     QLabel* titleLabel = new QLabel(title, card);
-    titleLabel->setStyleSheet("font-size: 18px; font-weight: 500;");
+    titleLabel->setProperty("cardRole", "cardTitle");
     titleLabelMap[title] = titleLabel;
     cardLayout->addWidget(titleLabel);
 
-    // 收支数值行
-    QHBoxLayout* valueLayout = new QHBoxLayout();
-    valueLayout->setSpacing(5);
-    valueLayout->setContentsMargins(0, 0, 0, 0);
-
     // 收入
-    QWidget* incomeWidget = new QWidget(card);
-    QVBoxLayout* incomeLayout = new QVBoxLayout(incomeWidget);
-    QLabel* incomeTitle = new QLabel("收入", incomeWidget);
-    incomeTitle->setStyleSheet("font-size: 14px; opacity: 0.8;");
-    QLabel* incomeValue = new QLabel(incomeText, incomeWidget);
-    incomeValue->setStyleSheet("font-size: 24px; font-weight: bold;");
+    QLabel* incomeTitle = new QLabel(QStringLiteral("\u6536\u5165"), card);
+    incomeTitle->setProperty("cardRole", "cardIncomeLabel");
+    QLabel* incomeValue = new QLabel(incomeText, card);
+    incomeValue->setProperty("cardRole", "cardIncomeValue");
     incomeLabelMap[title] = incomeValue;
-    incomeLayout->addWidget(incomeTitle);
-    incomeLayout->addWidget(incomeValue);
-    valueLayout->addWidget(incomeWidget);
+    cardLayout->addWidget(incomeTitle);
+    cardLayout->addWidget(incomeValue);
 
     // 支出
-    QWidget* expenseWidget = new QWidget(card);
-    QVBoxLayout* expenseLayout = new QVBoxLayout(expenseWidget);
-    QLabel* expenseTitle = new QLabel("支出", expenseWidget);
-    expenseTitle->setStyleSheet("font-size: 14px; opacity: 0.8;");
-    QLabel* expenseValue = new QLabel(expenseText, expenseWidget);
-    expenseValue->setStyleSheet("font-size: 24px; font-weight: bold;");
+    QLabel* expenseTitle = new QLabel(QStringLiteral("\u652f\u51fa"), card);
+    expenseTitle->setProperty("cardRole", "cardExpenseLabel");
+    QLabel* expenseValue = new QLabel(expenseText, card);
+    expenseValue->setProperty("cardRole", "cardExpenseValue");
     expenseLabelMap[title] = expenseValue;
-    expenseLayout->addWidget(expenseTitle);
-    expenseLayout->addWidget(expenseValue);
-    valueLayout->addWidget(expenseWidget);
+    cardLayout->addWidget(expenseTitle);
+    cardLayout->addWidget(expenseValue);
 
     // 盈余
-    QWidget* profitWidget = new QWidget(card);
-    QVBoxLayout* profitWidgetLayout = new QVBoxLayout(profitWidget);
-    QLabel* profitTitle = new QLabel("盈余", profitWidget);
-    profitTitle->setStyleSheet("font-size: 14px; opacity: 0.8;");
-    QLabel* profitValue = new QLabel("¥0.00", profitWidget);
-    profitValue->setStyleSheet("font-size: 24px; font-weight: bold;");
+    QLabel* profitTitle = new QLabel(QStringLiteral("\u76c8\u4f59"), card);
+    profitTitle->setProperty("cardRole", "cardProfitLabel");
+    QLabel* profitValue = new QLabel(QStringLiteral("\u00a50.00"), card);
+    profitValue->setProperty("cardRole", "cardProfitValue");
     profitLabelMap[title] = profitValue;
-    profitWidgetLayout->addWidget(profitTitle);
-    profitWidgetLayout->addWidget(profitValue);
-    valueLayout->addWidget(profitWidget);
+    cardLayout->addWidget(profitTitle);
+    cardLayout->addWidget(profitValue);
 
-
-    valueLayout->addStretch();
-    cardLayout->addLayout(valueLayout);
+    cardLayout->addStretch();
 
     return card;
 }
@@ -436,7 +361,13 @@ void MainWidget::onSwitchContent(const QString& type)
     else {
         d->stackedContent->setCurrentWidget(d->homeWidget);
     }
-    updateBalanceCards();// 更新统计
+
+    d->homeBtn->setChecked(type == "home");
+    d->accountingBtn->setChecked(type == "accounting");
+    d->analysisBtn->setChecked(type == "analysis");
+    d->settingsBtn->setChecked(type == "settings");
+
+    updateBalanceCards();
 }
 
 // 更新收支卡片数据
@@ -453,23 +384,23 @@ void MainWidget::updateBalanceCards()
     Statistics monthStats = d->dataCenter.getStatistics(TimeRange::Month, today.year(), today.month());
     Statistics dayStats = d->dataCenter.getStatistics(TimeRange::Day, today.year(), today.month(), today.day());
 
-    d->incomeLabelMap["总收支"]->setText(d->toLocaleString(totalStats.income));
-    d->expenseLabelMap["总收支"]->setText(d->toLocaleString(totalStats.expense));
-    d->profitLabelMap["总收支"]->setText(d->toLocaleString(totalStats.profit));
+    d->incomeLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.income));
+    d->expenseLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.expense));
+    d->profitLabelMap["🌐 总收支"]->setText(d->toLocaleString(totalStats.profit));
 
-    d->incomeLabelMap["年收支"]->setText(d->toLocaleString(yearStats.income));
-    d->expenseLabelMap["年收支"]->setText(d->toLocaleString(yearStats.expense));
-    d->profitLabelMap["年收支"]->setText(d->toLocaleString(yearStats.profit));
+    d->incomeLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.income));
+    d->expenseLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.expense));
+    d->profitLabelMap["📅 年收支"]->setText(d->toLocaleString(yearStats.profit));
 
-    d->incomeLabelMap["月收支"]->setText(d->toLocaleString(monthStats.income));
-    d->expenseLabelMap["月收支"]->setText(d->toLocaleString(monthStats.expense));
-    d->profitLabelMap["月收支"]->setText(d->toLocaleString(monthStats.profit));
+    d->incomeLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.income));
+    d->expenseLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.expense));
+    d->profitLabelMap["📆 月收支"]->setText(d->toLocaleString(monthStats.profit));
      
-    d->incomeLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.income));
-    d->expenseLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.expense));
-    d->profitLabelMap["今日收支"]->setText(d->toLocaleString(dayStats.profit));
+    d->incomeLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.income));
+    d->expenseLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.expense));
+    d->profitLabelMap["🌞 今日收支"]->setText(d->toLocaleString(dayStats.profit));
 
-    d->titleLabelMap["年收支"]->setText(QString::number(today.year()) + "年收支");
-    d->titleLabelMap["月收支"]->setText(QString::number(today.month()) + "月收支");
-    d->titleLabelMap["今日收支"]->setText(QString::number(today.month()) + "月" + QString::number(today.day()) + "日收支");
+    d->titleLabelMap["📅 年收支"]->setText(QString::number(today.year()) + "年收支");
+    d->titleLabelMap["📆 月收支"]->setText(QString::number(today.month()) + "月收支");
+    d->titleLabelMap["🌞 今日收支"]->setText(QString::number(today.month()) + "月" + QString::number(today.day()) + "日收支");
 }

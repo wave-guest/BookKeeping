@@ -41,38 +41,50 @@ void AnalysisWidgetPrivate::initUI()
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(15);
 
-    // 1. 筛选栏
+    // 1. 筛选栏（两行）
     QWidget* filterWidget = new QWidget(q_ptr);
-    QHBoxLayout* filterLayout = new QHBoxLayout(filterWidget);
-    filterLayout->setSpacing(10);
+    filterWidget->setObjectName("filterBar");
+    QVBoxLayout* filterOuterLayout = new QVBoxLayout(filterWidget);
+    filterOuterLayout->setContentsMargins(0, 0, 0, 0);
+    filterOuterLayout->setSpacing(10);
 
-    filterLayout->addWidget(new QLabel(QStringLiteral("\u6536\u652f\u7c7b\u578b:")));
+    // 第一行：类型 + 分类 + 图表类型
+    QHBoxLayout* row1 = new QHBoxLayout;
+    row1->setSpacing(10);
+    row1->addWidget(new QLabel(QStringLiteral("\u6536\u652f\u7c7b\u578b:")));
     typeCombo = new QComboBox(q_ptr);
     typeCombo->addItems({ QStringLiteral("\u5168\u90e8"), QStringLiteral("\u6536\u5165"), QStringLiteral("\u652f\u51fa") });
-    filterLayout->addWidget(typeCombo);
+    row1->addWidget(typeCombo);
 
-    filterLayout->addWidget(new QLabel(QStringLiteral("\u7c7b\u522b:")));
+    row1->addWidget(new QLabel(QStringLiteral("\u7c7b\u522b:")));
     categoryCombo = new QComboBox(q_ptr);
     categoryCombo->addItems({ QStringLiteral("\u5168\u90e8"), QStringLiteral("\u9910\u996e"), QStringLiteral("\u4ea4\u901a"), QStringLiteral("\u5de5\u8d44"), QStringLiteral("\u8d2d\u7269"), QStringLiteral("\u623f\u79df") });
-    filterLayout->addWidget(categoryCombo);
+    row1->addWidget(categoryCombo);
 
-    filterLayout->addWidget(new QLabel(QStringLiteral("\u65e5\u671f\u8303\u56f4:")));
-    startDateEdit = new QDateEdit(QDate::currentDate().addMonths(-1), q_ptr);
-    endDateEdit = new QDateEdit(QDate::currentDate(), q_ptr);
-    filterLayout->addWidget(startDateEdit);
-    filterLayout->addWidget(new QLabel(QStringLiteral("\u81f3")));
-    filterLayout->addWidget(endDateEdit);
-
-    filterLayout->addWidget(new QLabel(QStringLiteral("\u56fe\u8868\u7c7b\u578b:")));
+    row1->addWidget(new QLabel(QStringLiteral("\u56fe\u8868\u7c7b\u578b:")));
     pieRadio = new QRadioButton(QStringLiteral("\u997c\u56fe"), q_ptr);
     lineRadio = new QRadioButton(QStringLiteral("\u6298\u7ebf\u56fe"), q_ptr);
     pieRadio->setChecked(true);
-    filterLayout->addWidget(pieRadio);
-    filterLayout->addWidget(lineRadio);
+    row1->addWidget(pieRadio);
+    row1->addWidget(lineRadio);
+    row1->addStretch();
+    filterOuterLayout->addLayout(row1);
+
+    // 第二行：日期 + 刷新
+    QHBoxLayout* row2 = new QHBoxLayout;
+    row2->setSpacing(10);
+    row2->addWidget(new QLabel(QStringLiteral("\u65e5\u671f\u8303\u56f4:")));
+    startDateEdit = new QDateEdit(QDate::currentDate().addMonths(-1), q_ptr);
+    endDateEdit = new QDateEdit(QDate::currentDate(), q_ptr);
+    row2->addWidget(startDateEdit);
+    row2->addWidget(new QLabel(QStringLiteral("\u81f3")));
+    row2->addWidget(endDateEdit);
+    row2->addStretch();
 
     refreshBtn = new QPushButton(QStringLiteral("\u5237\u65b0"), q_ptr);
-    filterLayout->addWidget(refreshBtn);
-    filterLayout->addStretch();
+    refreshBtn->setObjectName("refreshBtn");
+    row2->addWidget(refreshBtn);
+    filterOuterLayout->addLayout(row2);
 
     mainLayout->addWidget(filterWidget);
 
@@ -101,6 +113,7 @@ AnalysisWidget::AnalysisWidget(QWidget* parent)
     : QWidget(parent)
     , d_ptr(new AnalysisWidgetPrivate(this))
 {
+    setObjectName("analysisPage");
     Q_D(AnalysisWidget);
     d->initUI();
     setWindowTitle(QStringLiteral("\u6536\u652f\u5206\u6790"));
