@@ -214,10 +214,10 @@ UI组件**不持有**DataCenter引用，全经过MainWindow协调。
 ### Known Issues
 1. ~~**DataCenter.cpp 函数重复**~~ → **已修复 (Step 0)**
 2. ~~**AnalysisWidget::dataRequested 信号无人连接**~~ → **已修复 (Step 1)**
-3. **筛选/搜索** UI层是存根（仅弹框），DataCenter层已有完整实现未连通
-4. **updateBalanceCards** 12次独立SQL调用，可合并为4次
+3. ~~**筛选/搜索** UI层是存根（仅弹框），DataCenter层已有完整实现未连通~~ → **已修复 (Step 2)**
+4. ~~**updateBalanceCards** 12次独立SQL调用，可合并为4次~~ → **已修复 (Step 3)**
 5. ~~**PageController** 编译但无人使用~~ → **已修复 (Step 5)**
-6. **DBHelper** 伪异步（线程+queue+mutex+cv+future.get阻塞）
+6. ~~**DBHelper** 伪异步（线程+queue+mutex+cv+future.get阻塞）~~ → **已修复 (Step 4)**
 7. ~~**WINDOWS_EXPORT_ALL_SYMBOLS** 导出所有DLL符号~~ → **已修复 (Step 7)**
 
 ## Execution Checklist
